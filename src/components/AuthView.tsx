@@ -103,16 +103,25 @@ export default function AuthView({ onGuestMode, primaryColor = "indigo" }: AuthV
     setLoading(true);
     setError(null);
     try {
+      const redirectUrl = window.location.origin;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
+          queryParams: {
+            prompt: "select_account",
+            access_type: "offline",
+          },
         },
       });
       if (oauthError) throw oauthError;
     } catch (err: any) {
       console.error("Google Authentication failed:", err);
-      setError(err?.message || "An unexpected error occurred during Google Sign-In.");
+      let msg = err?.message || "An unexpected error occurred during Google Sign-In.";
+      if (msg.toLowerCase().includes("provider is not enabled") || msg.toLowerCase().includes("unsupported provider")) {
+        msg = "Google Provider is not enabled in your Supabase project. Go to Supabase Dashboard > Authentication > Providers > Google to enable it and add your Google Client ID/Secret.";
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
