@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
@@ -686,21 +687,24 @@ Example format:
     }
   });
 
-  // Vite middleware for development or Static serving for Production
-  if (process.env.NODE_ENV !== "production") {
+  const distPath = path.join(process.cwd(), "dist");
+  const hasDist = fs.existsSync(distPath) && fs.existsSync(path.join(distPath, "index.html"));
+
+  // Serve compiled production build if present for 100% reliable Tailwind styling, or fallback to Vite dev middleware
+  if (hasDist) {
+    app.use(express.static(distPath));
+    app.get("*", (req, res, next) => {
+      if (req.url.startsWith("/api/")) return next();
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+    console.log("Serving optimized application from dist.");
+  } else {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
     console.log("Vite development middleware integrated.");
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-    console.log("Production static files server configured.");
   }
 
   app.listen(PORT, "0.0.0.0", () => {

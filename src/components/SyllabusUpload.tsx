@@ -529,7 +529,7 @@ export default function SyllabusUpload({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-hairline-soft-app">
         <div>
           <h3 className="text-lg font-bold text-ink-app tracking-tight flex items-center gap-2 font-serif">
-            <svg className="w-5 h-5 text-primary-app animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            <svg width="20" height="20" className="w-5 h-5 text-primary-app animate-pulse shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
             Import Your Curriculum
           </h3>
           <p className="text-xs text-muted-soft-app mt-1 font-sans">
@@ -697,7 +697,7 @@ export default function SyllabusUpload({
           <div className="flex flex-col items-center justify-center space-y-4 pointer-events-none">
             {/* Animated Upload Icon */}
             <div className="p-4 bg-white/50 dark:bg-slate-900 rounded-full border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-primary-app dark:group-hover:text-primary-app group-hover:border-primary-app/30 group-hover:shadow-md transition-all duration-300">
-              <svg className="w-6 h-6 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+              <svg width="24" height="24" className="w-6 h-6 animate-bounce shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-primary-app transition-colors">
