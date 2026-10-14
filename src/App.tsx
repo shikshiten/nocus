@@ -226,6 +226,49 @@ export default function App() {
     return { subjectName, units };
   };
 
+  const sanitizeErrorMessage = (rawError?: any): string => {
+    if (!rawError) return "Unable to process the document. Please try again or paste the syllabus text directly.";
+    const msg = typeof rawError === "string" ? rawError : rawError.message || String(rawError);
+
+    // Filter out technical, infrastructure, and credential keywords
+    const leakKeywords = [
+      "gemini",
+      "openai",
+      "api_key",
+      "apikey",
+      "api-key",
+      "secret",
+      "token",
+      "bearer",
+      "sk-",
+      "cloudflare",
+      "worker",
+      "environment variable",
+      "env variable",
+      "process.env",
+      "r2",
+      "s3",
+      "bucket",
+      "aws",
+      "turso",
+      "libsql",
+      "database",
+      "stack trace",
+      "server error 50",
+      "status 50",
+      "ai studio"
+    ];
+
+    const lower = msg.toLowerCase();
+    const hasLeak = leakKeywords.some((k) => lower.includes(k));
+
+    if (hasLeak || msg.length > 180) {
+      return "Unable to parse this syllabus automatically. Please ensure the document is clear, or paste the text directly into the text box.";
+    }
+
+    return msg;
+  };
+
   const handleProcessFile = async (file: File) => {
     if (!file) return;
     const isPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
@@ -259,7 +302,7 @@ export default function App() {
               parsed = await res.json();
             } else {
               const errJson = await res.json().catch(() => ({}));
-              throw new Error(errJson.error || `Failed to parse syllabus PDF (Server Error ${res.status}).`);
+              throw new Error(errJson.error || "Unable to parse syllabus document.");
             }
           } catch (apiErr: any) {
             console.error("API syllabus parse error:", apiErr);
@@ -288,7 +331,7 @@ export default function App() {
             "success"
           );
         } catch (err: any) {
-          setUploadState(prev => ({ ...prev, error: err.message || "Something went wrong while processing the file.", loading: false }));
+          setUploadState(prev => ({ ...prev, error: sanitizeErrorMessage(err), loading: false }));
         }
       };
       reader.onerror = () => {
@@ -296,7 +339,7 @@ export default function App() {
       };
       reader.readAsDataURL(file);
     } catch (err: any) {
-      setUploadState(prev => ({ ...prev, error: err.message || "Failed to process file.", loading: false }));
+      setUploadState(prev => ({ ...prev, error: sanitizeErrorMessage(err), loading: false }));
     }
   };
 
@@ -351,7 +394,7 @@ export default function App() {
         "success"
       );
     } catch (err: any) {
-      setUploadState(prev => ({ ...prev, error: err.message || "Failed to process text syllabus.", loading: false }));
+      setUploadState(prev => ({ ...prev, error: sanitizeErrorMessage(err), loading: false }));
     }
   };
 
@@ -379,7 +422,7 @@ export default function App() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to scan syllabus images.");
+        throw new Error(errData.error || "Unable to scan syllabus images.");
       }
 
       const parsed = await res.json();
@@ -406,7 +449,7 @@ export default function App() {
         "success"
       );
     } catch (err: any) {
-      setUploadState(prev => ({ ...prev, error: err.message || "Failed to scan images with Gemini OCR.", loading: false }));
+      setUploadState(prev => ({ ...prev, error: sanitizeErrorMessage(err), loading: false }));
     }
   };
 
@@ -830,7 +873,7 @@ export default function App() {
       }
     } catch (err: any) {
       console.error(err);
-      setAvatarGenerationError(err.message || "Something went wrong during generation.");
+      setAvatarGenerationError(sanitizeErrorMessage(err));
     } finally {
       setGeneratingAvatar(false);
     }

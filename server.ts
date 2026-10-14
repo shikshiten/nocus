@@ -27,7 +27,7 @@ function getAIClient(): GoogleGenAI {
   if (!aiClient) {
     const key = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").trim();
     if (!key) {
-      throw new Error("Neither GEMINI_API_KEY nor OPENAI_API_KEY could fulfill this request. Please configure an AI key.");
+      throw new Error("AI service is currently unavailable.");
     }
     // Initialize standard GoogleGenAI client with API key auth
     aiClient = new GoogleGenAI({
@@ -97,8 +97,8 @@ async function generateContentWithRetry(
           errString.includes("ACCESS_TOKEN_TYPE_UNSUPPORTED");
 
         if (isAuthError) {
-          console.error("Gemini API Authentication Failed: Invalid API key or OAuth credential type.");
-          throw new Error("Invalid Gemini API Key or Authentication Error (401 UNAUTHENTICATED). Please verify that process.env.GEMINI_API_KEY is set to a valid Google AI Studio API Key (starting with 'AIza').");
+          console.error("AI API Authentication Failed.");
+          throw new Error("AI service authentication error. Please try again later.");
         }
 
         const isQuotaExceeded = 
@@ -375,15 +375,17 @@ Ensure the response contains no markdown block characters (like \`\`\`json) and 
       try {
         parsedData = cleanAndParseJSON(responseText);
       } catch (parseErr) {
-        console.error("Gemini failed to output valid JSON. Output was:", responseText);
-        throw new Error("Could not parse JSON response from the Gemini API. Ensure the input matches standard syllabus layout.");
+        console.error("Failed to parse AI response JSON. Output was:", responseText);
+        return res.status(500).json({
+          error: "Unable to parse this syllabus automatically. Please ensure the document is clear, or paste the text directly."
+        });
       }
 
       res.json(parsedData);
     } catch (error: any) {
       console.error("Error in parse-syllabus endpoint:", error);
       res.status(500).json({ 
-        error: error.message || "Failed to parse syllabus. Please ensure the GEMINI_API_KEY is correctly set in AI Studio secrets." 
+        error: "Unable to parse this syllabus automatically. Please ensure the document is clear, or paste the text directly." 
       });
     }
   });
@@ -571,15 +573,17 @@ Ensure the response contains no markdown formatting characters (like \`\`\`json)
       try {
         parsedData = cleanAndParseJSON(responseText);
       } catch (parseErr) {
-        console.error("Gemini failed to output valid JSON. Output was:", responseText);
-        throw new Error("Could not parse JSON response from the Gemini API. Ensure image text is clear and readable.");
+        console.error("Failed to parse scan AI response JSON. Output was:", responseText);
+        return res.status(500).json({
+          error: "Unable to scan the syllabus images. Please ensure the images are clear, or paste the text directly."
+        });
       }
 
       res.json(parsedData);
     } catch (error: any) {
       console.error("Error in scan-syllabus endpoint:", error);
       res.status(500).json({
-        error: error.message || "Failed to scan syllabus. Please ensure the GEMINI_API_KEY is correctly set in AI Studio secrets."
+        error: "Unable to scan the syllabus images. Please ensure the images are clear, or paste the text directly."
       });
     }
   });
@@ -671,7 +675,7 @@ Follow these strict design guidelines:
     } catch (error: any) {
       console.error("Error in generate-avatar endpoint:", error);
       res.status(500).json({
-        error: error.message || "Failed to generate AI avatar."
+        error: "Unable to generate custom avatar right now. Please try again later."
       });
     }
   });
@@ -768,7 +772,7 @@ Example format:
     } catch (error: any) {
       console.error("Error in generate-quote endpoint:", error);
       res.status(500).json({
-        error: error.message || "Failed to generate AI quote."
+        error: "Unable to generate custom quote right now. Please try again later."
       });
     }
   });
@@ -823,7 +827,7 @@ Example format:
       res.json({ uploadUrl, fileKey });
     } catch (error: any) {
       console.error("Error generating upload URL:", error);
-      res.status(500).json({ error: error.message || "Failed to generate upload URL." });
+      res.status(500).json({ error: "Failed to generate secure upload link." });
     }
   });
 
@@ -831,7 +835,7 @@ Example format:
   app.get("/api/vault/download-url/:fileKey(*)", async (req, res) => {
     try {
       if (!r2Client) {
-        return res.status(503).json({ error: "R2 storage is not configured on the server." });
+        return res.status(503).json({ error: "Storage service is currently unavailable." });
       }
 
       const { fileKey } = req.params;
@@ -851,7 +855,7 @@ Example format:
       res.json({ downloadUrl });
     } catch (error: any) {
       console.error("Error generating download URL:", error);
-      res.status(500).json({ error: error.message || "Failed to generate download URL." });
+      res.status(500).json({ error: "Failed to generate secure download link." });
     }
   });
 
@@ -859,7 +863,7 @@ Example format:
   app.delete("/api/vault/file/:fileKey(*)", async (req, res) => {
     try {
       if (!r2Client) {
-        return res.status(503).json({ error: "R2 storage is not configured on the server." });
+        return res.status(503).json({ error: "Storage service is currently unavailable." });
       }
 
       const { fileKey } = req.params;
@@ -878,7 +882,7 @@ Example format:
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting file from R2:", error);
-      res.status(500).json({ error: error.message || "Failed to delete file." });
+      res.status(500).json({ error: "Failed to delete file from storage." });
     }
   });
 
