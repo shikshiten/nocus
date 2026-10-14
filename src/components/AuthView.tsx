@@ -55,11 +55,25 @@ export default function AuthView({ onGuestMode }: AuthViewProps) {
               routing="hash"
               appearance={{
                 baseTheme: dark,
+                layout: {
+                  logoPlacement: "none",
+                  socialButtonsPlacement: "top",
+                  showOptionalFields: false,
+                },
                 variables: {
                   colorPrimary: "#4F46E5",
                   colorBackground: "#0E0C22",
                   colorInputBackground: "#13112A",
                   borderRadius: "1rem",
+                },
+                elements: {
+                  footer: "hidden",
+                  footerAction: "hidden",
+                  footerPages: "hidden",
+                  footerPagesLink: "hidden",
+                  logoBox: "hidden",
+                  logoImage: "hidden",
+                  headerSubtitle: "hidden",
                 },
               }}
             />
@@ -68,11 +82,25 @@ export default function AuthView({ onGuestMode }: AuthViewProps) {
               routing="hash"
               appearance={{
                 baseTheme: dark,
+                layout: {
+                  logoPlacement: "none",
+                  socialButtonsPlacement: "top",
+                  showOptionalFields: false,
+                },
                 variables: {
                   colorPrimary: "#4F46E5",
                   colorBackground: "#0E0C22",
                   colorInputBackground: "#13112A",
                   borderRadius: "1rem",
+                },
+                elements: {
+                  footer: "hidden",
+                  footerAction: "hidden",
+                  footerPages: "hidden",
+                  footerPagesLink: "hidden",
+                  logoBox: "hidden",
+                  logoImage: "hidden",
+                  headerSubtitle: "hidden",
                 },
               }}
             />

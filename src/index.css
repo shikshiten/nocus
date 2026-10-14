@@ -385,4 +385,20 @@ html, body {
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
 
+/* Hide Clerk branding, logo watermarks, and "Secured by Clerk" badge */
+.cl-footer,
+.cl-footerAction,
+.cl-footerPages,
+.cl-footerPagesLink,
+.cl-internal-b3fm6y,
+.cl-logoBox,
+.cl-logoImage,
+.cl-watermark,
+[data-localization-key*="footer"],
+[data-localization-key*="securedBy"],
+a[href*="clerk.com"],
+svg[aria-label*="Clerk"] {
+  display: none !important;
+}
+
 
