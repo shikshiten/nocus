@@ -2484,11 +2484,8 @@ export default function App() {
 
       {/* 3. Main Content Container */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen lg:pl-60">
-        {/* Top Header Row */}
-        <header className="sticky top-0 z-30 h-16 bg-bg-app/80 backdrop-blur-md border-b border-hairline-soft-app px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4 relative">
-          {/* Top aesthetic premium dynamic accent bar */}
-          <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${theme.gradient} z-40`} />
-
+        {/* Top Header Row (Navbar) */}
+        <header className="sticky top-0 z-30 h-16 bg-[var(--bg)] border-b border-[var(--border)] px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4 relative transition-colors duration-200">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0" ref={headerDropdownRef}>
             <button
               onClick={() => setSidebarOpen(true)}
@@ -2612,7 +2609,7 @@ export default function App() {
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
-              className={`p-2 rounded-xl border cursor-pointer transition-all duration-150 hover:scale-105 active:scale-95 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-750`}
+              className="p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--text)] cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 shadow-xs"
               title="Toggle Dark Mode"
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -2622,15 +2619,16 @@ export default function App() {
             <div className="relative" ref={notificationsRef}>
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className={`p-2 rounded-xl border cursor-pointer relative transition-all duration-200 hover:scale-105 active:scale-95 ${notificationsOpen
-                  ? `${theme.badge} ${theme.borderPrimary}`
-                  : `border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-750`
-                  }`}
+                className={`p-2 rounded-xl border cursor-pointer relative transition-all duration-200 hover:scale-105 active:scale-95 bg-[var(--surface)] text-[var(--text)] shadow-xs ${
+                  notificationsOpen
+                    ? "border-[var(--accent)] ring-1 ring-[var(--accent)]"
+                    : "border-[var(--border)] hover:border-[var(--accent)]"
+                }`}
                 title="Notifications"
               >
-                <Bell className={`w-4 h-4 transition-transform duration-350 ${notificationsOpen ? "scale-110 rotate-12" : ""}`} />
+                <Bell className={`w-4 h-4 transition-transform duration-300 ${notificationsOpen ? "scale-110 rotate-12" : ""}`} />
                 {notifications.some((n) => !n.read) && (
-                  <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${theme.bg} ring-2 ring-white dark:ring-[#0A0F1D] animate-pulse`} />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--accent)] ring-2 ring-[var(--surface)] animate-pulse" />
                 )}
               </button>
 
@@ -2752,13 +2750,14 @@ export default function App() {
             <div className="relative" ref={activityDropdownRef}>
               <button
                 onClick={() => setActivityDropdownOpen(!activityDropdownOpen)}
-                className={`p-2 rounded-xl border cursor-pointer relative transition-all duration-200 hover:scale-105 active:scale-95 ${activityDropdownOpen
-                  ? `${theme.badge} ${theme.borderPrimary}`
-                  : `border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-750`
-                  }`}
+                className={`p-2 rounded-xl border cursor-pointer relative transition-all duration-200 hover:scale-105 active:scale-95 bg-[var(--surface)] text-[var(--text)] shadow-xs ${
+                  activityDropdownOpen
+                    ? "border-[var(--accent)] ring-1 ring-[var(--accent)]"
+                    : "border-[var(--border)] hover:border-[var(--accent)]"
+                }`}
                 title="Recent Activity"
               >
-                <History className={`w-4 h-4 transition-transform duration-350 ${activityDropdownOpen ? "scale-110 rotate-12" : ""}`} />
+                <History className={`w-4 h-4 transition-transform duration-300 ${activityDropdownOpen ? "scale-110 rotate-12" : ""}`} />
               </button>
 
               <AnimatePresence>
@@ -2869,7 +2868,7 @@ export default function App() {
               ) : (
                 <button
                   onClick={handleLogin}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r ${theme.gradient} text-white font-extrabold text-xs cursor-pointer shadow-md shadow-primary-app/10 hover:scale-105 active:scale-95 transition-all hover:brightness-110 border-0`}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[var(--accent)] text-white hover:brightness-110 font-extrabold text-xs cursor-pointer shadow-md shadow-[var(--accent-glow)] hover:scale-105 active:scale-95 transition-all border-0"
                 >
                   <LogIn className="w-3.5 h-3.5 text-white" />
                   <span>Sync</span>
@@ -2885,18 +2884,18 @@ export default function App() {
             <div className="max-w-3xl mx-auto space-y-6">
               <button
                 onClick={() => setIsAddingCourse(false)}
-                className={`flex items-center gap-1.5 text-xs font-bold text-slate-500 transition-all duration-150 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 px-3.5 py-2 rounded-full shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${pColor.textHover}`}
+                className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text)] transition-all duration-150 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] px-3.5 py-2 rounded-full shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 ← Back to Dashboard
               </button>
               <div className="text-center py-4">
-                <div className="inline-flex p-4 bg-primary-soft-app/25 dark:bg-primary-soft-app/10 text-primary-app border border-primary-app/10 mb-4 animate-bounce">
+                <div className="inline-flex p-4 rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--border)] mb-4 animate-bounce">
                   <GraduationCap className="w-8 h-8" />
                 </div>
-                <h1 className="text-3xl font-black text-slate-800 dark:text-white font-display tracking-tight">
+                <h1 className="text-3xl font-black text-[var(--text)] font-serif tracking-tight">
                   Track a New Subject
                 </h1>
-                <p className="mt-2 text-sm text-slate-400 dark:text-slate-500 max-w-lg mx-auto">
+                <p className="mt-2 text-sm text-[var(--text-muted)] max-w-lg mx-auto font-sans leading-relaxed">
                   Load another syllabus to track multiple subjects or classes concurrently in your active dashboard.
                 </p>
               </div>
@@ -2924,13 +2923,13 @@ export default function App() {
                       className="max-w-3xl mx-auto space-y-6"
                     >
                       <div className="text-center py-8">
-                        <div className="inline-flex p-4 bg-primary-soft-app/25 dark:bg-primary-soft-app/10 text-primary-app border border-primary-app/10 mb-4 animate-bounce">
+                        <div className="inline-flex p-4 rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--border)] mb-4 animate-bounce">
                           <GraduationCap className="w-8 h-8" />
                         </div>
-                        <h1 className="text-3xl font-black text-slate-800 dark:text-white font-display tracking-tight">
+                        <h1 className="text-3xl font-black text-[var(--text)] font-serif tracking-tight">
                           AI Syllabus Tracker & Planner
                         </h1>
-                        <p className="mt-2 text-sm text-slate-400 dark:text-slate-500 max-w-lg mx-auto">
+                        <p className="mt-2 text-sm text-[var(--text-muted)] max-w-lg mx-auto font-sans leading-relaxed">
                           Transform any messy subject syllabus or syllabus text into an actionable study checklist instantly. Set goals, count down to exams, and build learning habits.
                         </p>
                       </div>
@@ -2945,9 +2944,9 @@ export default function App() {
                       />
 
                       {!user && (
-                        <div className="p-4 bg-amber-50/50 dark:bg-amber-950/10 text-amber-850 dark:text-amber-400 text-xs rounded-2xl border border-amber-500/15 text-center max-w-lg mx-auto">
+                        <div className="p-4 bg-[rgba(213,54,12,0.12)] text-[var(--text)] text-xs rounded-2xl border border-[var(--accent)] text-center max-w-lg mx-auto transition-colors">
                           💡 <strong>Guest Mode:</strong> Your data is saved locally on this browser.{" "}
-                          <button onClick={handleLogin} className="underline font-bold hover:text-amber-900 dark:hover:text-amber-300">
+                          <button onClick={handleLogin} className="underline font-bold text-[var(--accent)] hover:brightness-125 cursor-pointer transition-all">
                             Sign in with Google
                           </button>{" "}
                           to securely back up your data to the cloud.
@@ -3776,25 +3775,17 @@ export default function App() {
         <div
           className="relative mx-3 mb-3 rounded-[28px] overflow-hidden"
           style={{
-            background: themeStyle === "terracotta"
-              ? "rgba(16, 16, 16, 0.82)"
-              : darkMode
-                ? "rgba(8, 7, 20, 0.78)"
-                : "rgba(255, 255, 255, 0.72)",
+            background: "color-mix(in srgb, var(--surface) 85%, transparent)",
             backdropFilter: "blur(24px) saturate(1.8)",
             WebkitBackdropFilter: "blur(24px) saturate(1.8)",
-            boxShadow: darkMode
-              ? "0 -1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)"
-              : "0 -1px 0 rgba(0,0,0,0.04), 0 8px 40px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.8)",
-            border: darkMode
-              ? "1px solid rgba(255,255,255,0.08)"
-              : "1px solid rgba(0,0,0,0.07)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+            border: "1px solid var(--border)",
           }}
         >
-          {/* Active tab gradient accent line at top */}
+          {/* Active tab accent line at top */}
           <div
-            className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${theme.gradient}`}
-            style={{ opacity: 0.7 }}
+            className="absolute top-0 left-0 right-0 h-[2px]"
+            style={{ backgroundColor: "var(--accent)", opacity: 0.8 }}
           />
 
           <div className="flex items-center justify-around px-2 py-2">
@@ -3823,11 +3814,7 @@ export default function App() {
                     <span
                       className="absolute inset-0 rounded-2xl"
                       style={{
-                        background: themeStyle === "terracotta"
-                          ? "rgba(213, 54, 12, 0.18)"
-                          : darkMode
-                            ? "rgba(79, 70, 229, 0.22)"
-                            : "rgba(75, 63, 160, 0.10)",
+                        background: "var(--accent-soft)",
                       }}
                     />
                   )}
@@ -3839,10 +3826,8 @@ export default function App() {
                       height={22}
                       className="shrink-0 transition-all duration-200"
                       style={{
-                        color: isActive
-                          ? themeStyle === "terracotta" ? "#D5360C" : darkMode ? "#818CF8" : "#4B3FA0"
-                          : darkMode ? "#6B7280" : "#9CA3AF",
-                        filter: isActive ? "drop-shadow(0 0 6px currentColor)" : "none",
+                        color: isActive ? "var(--accent)" : "var(--text-muted)",
+                        filter: isActive ? "drop-shadow(0 0 6px var(--accent-glow))" : "none",
                         transform: isActive ? "scale(1.1) translateY(-1px)" : "scale(1)",
                       }}
                     />
@@ -3851,8 +3836,8 @@ export default function App() {
                       <span
                         className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full text-white text-[8px] font-black flex items-center justify-center px-[3px] leading-none"
                         style={{
-                          background: themeStyle === "terracotta" ? "#D5360C" : "#4B3FA0",
-                          boxShadow: "0 0 0 2px " + (darkMode ? "rgba(8,7,20,0.9)" : "rgba(255,255,255,0.9)"),
+                          background: "var(--accent)",
+                          boxShadow: "0 0 0 2px var(--surface)",
                         }}
                       >
                         {item.badge > 9 ? "9+" : item.badge}
@@ -3864,9 +3849,7 @@ export default function App() {
                   <span
                     className="text-[9px] font-bold tracking-wide transition-all duration-200 leading-none"
                     style={{
-                      color: isActive
-                        ? themeStyle === "terracotta" ? "#D5360C" : darkMode ? "#818CF8" : "#4B3FA0"
-                        : darkMode ? "#6B7280" : "#9CA3AF",
+                      color: isActive ? "var(--accent)" : "var(--text-muted)",
                       fontWeight: isActive ? 800 : 600,
                     }}
                   >

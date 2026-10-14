@@ -524,34 +524,34 @@ export default function SyllabusUpload({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-surface-app border border-hairline-app rounded-3xl p-6 md:p-8 transition-all duration-300">
+    <div className="w-full max-w-4xl mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-2xl transition-all duration-300">
       {/* Header inside Card */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-hairline-soft-app">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-[var(--border)]">
         <div>
-          <h3 className="text-lg font-bold text-ink-app tracking-tight flex items-center gap-2 font-serif">
-            <svg width="20" height="20" className="w-5 h-5 text-primary-app animate-pulse shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+          <h3 className="text-lg font-bold text-[var(--text)] tracking-tight flex items-center gap-2 font-serif">
+            <svg width="20" height="20" className="w-5 h-5 text-[var(--accent)] animate-pulse shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
             Import Your Curriculum
           </h3>
-          <p className="text-xs text-muted-soft-app mt-1 font-sans">
+          <p className="text-xs text-[var(--text-muted)] mt-1 font-sans">
             Select your preferred method to parse and structure your syllabus instantly.
           </p>
         </div>
       </div>
 
       {/* Redesigned Import Method Selector Header Block */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-card-app/30 border border-hairline-soft-app p-4 rounded-2xl relative">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-[var(--bg)] border border-[var(--border)] p-4 rounded-2xl relative">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-primary-soft-app/10 text-primary-app rounded-xl shrink-0">
+          <div className="p-2.5 bg-[var(--accent-soft)] text-[var(--accent)] rounded-xl shrink-0">
             {mode === "file" && <FileText className="w-5 h-5" />}
             {mode === "text" && <AlignLeft className="w-5 h-5" />}
             {mode === "image" && <Camera className="w-5 h-5" />}
           </div>
           <div className="min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-soft-app leading-none">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] leading-none font-mono">
               Import Method
             </div>
             <div className="mt-1 flex items-center gap-2">
-              <span className="text-sm font-extrabold text-ink-app truncate">
+              <span className="text-sm font-extrabold text-[var(--text)] truncate">
                 {mode === "file" && "Upload PDF"}
                 {mode === "text" && "Paste Text"}
                 {mode === "image" && "Scan Documents"}
@@ -565,10 +565,10 @@ export default function SyllabusUpload({
           <button
             type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-slate-900 border border-hairline-app hover:border-primary-app hover:bg-slate-50 dark:hover:bg-slate-850 text-ink-app text-xs font-bold rounded-xl flex items-center justify-between sm:justify-start gap-2 shadow-xs transition-all cursor-pointer select-none"
+            className="w-full sm:w-auto px-4 py-2.5 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] text-[var(--text)] text-xs font-bold rounded-xl flex items-center justify-between sm:justify-start gap-2 shadow-xs transition-all duration-200 cursor-pointer select-none"
           >
             <span>Change Method</span>
-            <ChevronDown className={`w-4 h-4 text-muted-app transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`} />
+            <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
           </button>
 
           {isDropdownOpen && (
@@ -580,9 +580,9 @@ export default function SyllabusUpload({
               />
               
               {/* Floating Popover Menu Container */}
-              <div className="absolute right-0 mt-2 w-72 bg-surface-app border border-hairline-app rounded-2xl shadow-xl py-2 z-40 animate-in fade-in-50 slide-in-from-top-3 duration-200">
-                <div className="px-4 py-1.5 border-b border-hairline-soft-app mb-1">
-                  <span className="text-[10px] font-bold text-muted-soft-app uppercase tracking-wider">
+              <div className="absolute right-0 mt-2 w-72 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-2xl py-2 z-40 animate-in fade-in-50 slide-in-from-top-3 duration-200">
+                <div className="px-4 py-1.5 border-b border-[var(--border)] mb-1">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">
                     Select Import Method
                   </span>
                 </div>
@@ -596,14 +596,14 @@ export default function SyllabusUpload({
                   }}
                   className={`w-full flex items-center px-4 py-2.5 text-left transition-colors cursor-pointer ${
                     mode === "file"
-                      ? "bg-primary-soft-app/10 text-primary-app font-semibold"
-                      : "text-ink-app hover:bg-card-app/60"
+                      ? "bg-[var(--accent-soft)] text-[var(--accent)] font-semibold"
+                      : "text-[var(--text)] hover:bg-[var(--accent-soft)]/50"
                   }`}
                 >
-                  <FileText className={`w-4 h-4 mr-3 shrink-0 ${mode === "file" ? "text-primary-app" : "text-slate-400"}`} />
+                  <FileText className={`w-4 h-4 mr-3 shrink-0 ${mode === "file" ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`} />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-bold">Upload PDF</div>
-                    <div className="text-[10px] text-muted-soft-app font-sans truncate">Import from syllabus file</div>
+                    <div className="text-[10px] text-[var(--text-muted)] font-sans truncate">Import from syllabus file</div>
                   </div>
                 </button>
 
@@ -616,14 +616,14 @@ export default function SyllabusUpload({
                   }}
                   className={`w-full flex items-center px-4 py-2.5 text-left transition-colors cursor-pointer ${
                     mode === "text"
-                      ? "bg-primary-soft-app/10 text-primary-app font-semibold"
-                      : "text-ink-app hover:bg-card-app/60"
+                      ? "bg-[var(--accent-soft)] text-[var(--accent)] font-semibold"
+                      : "text-[var(--text)] hover:bg-[var(--accent-soft)]/50"
                   }`}
                 >
-                  <AlignLeft className={`w-4 h-4 mr-3 shrink-0 ${mode === "text" ? "text-primary-app" : "text-slate-400"}`} />
+                  <AlignLeft className={`w-4 h-4 mr-3 shrink-0 ${mode === "text" ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`} />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-bold">Paste Text</div>
-                    <div className="text-[10px] text-muted-soft-app font-sans truncate">Copy & paste syllabus text</div>
+                    <div className="text-[10px] text-[var(--text-muted)] font-sans truncate">Copy & paste syllabus text</div>
                   </div>
                 </button>
 
@@ -636,14 +636,14 @@ export default function SyllabusUpload({
                   }}
                   className={`w-full flex items-center px-4 py-2.5 text-left transition-colors cursor-pointer ${
                     mode === "image"
-                      ? "bg-primary-soft-app/10 text-primary-app font-semibold"
-                      : "text-ink-app hover:bg-card-app/60"
+                      ? "bg-[var(--accent-soft)] text-[var(--accent)] font-semibold"
+                      : "text-[var(--text)] hover:bg-[var(--accent-soft)]/50"
                   }`}
                 >
-                  <Camera className={`w-4 h-4 mr-3 shrink-0 ${mode === "image" ? "text-primary-app" : "text-slate-400"}`} />
+                  <Camera className={`w-4 h-4 mr-3 shrink-0 ${mode === "image" ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`} />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-bold">Scan Documents</div>
-                    <div className="text-[10px] text-muted-soft-app font-sans truncate">Extract from pages or scans</div>
+                    <div className="text-[10px] text-[var(--text-muted)] font-sans truncate">Extract from pages or scans</div>
                   </div>
                 </button>
               </div>
@@ -653,24 +653,24 @@ export default function SyllabusUpload({
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-rose-500/10 text-rose-650 dark:text-rose-400 text-xs rounded-xl border border-rose-500/20 flex items-start gap-3">
+        <div className="mb-6 p-4 bg-rose-500/10 text-rose-500 text-xs rounded-xl border border-rose-500/20 flex items-start gap-3">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <div className="flex-1">
             <span className="font-bold">Error:</span> {error}
           </div>
-          <button onClick={() => setError(null)} className="text-rose-600 dark:text-rose-400 hover:text-rose-500 transition-colors">
+          <button onClick={() => setError(null)} className="text-rose-500 hover:text-rose-400 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-slate-250 dark:border-white/[0.08] rounded-[20px] bg-white/10 dark:bg-slate-950/20">
-          <Loader2 className="w-10 h-10 text-primary-app animate-spin" />
-          <h3 className="mt-4 text-sm font-bold text-slate-800 dark:text-slate-200 font-display">
+        <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-[var(--border)] rounded-2xl bg-[var(--bg)]">
+          <Loader2 className="w-10 h-10 text-[var(--accent)] animate-spin" />
+          <h3 className="mt-4 text-sm font-bold text-[var(--text)] font-serif">
             Scanning & Building Curriculum...
           </h3>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 text-center max-w-sm font-sans leading-relaxed">
+          <p className="mt-2 text-xs text-[var(--text-muted)] text-center max-w-sm font-sans leading-relaxed">
             Leveraging multimodal Gemini AI to extract subjects, organize chapters sequentially, and flagging handwritten or blurry contents with OCR confidence assessment.
           </p>
         </div>
@@ -681,10 +681,10 @@ export default function SyllabusUpload({
           onDragLeave={handleDrag}
           onDrop={handleDrop}
           onClick={triggerFileInput}
-          className={`group relative border-[1.5px] border-dashed rounded-xl p-12 text-center bg-bg-app transition-all duration-300 cursor-pointer ${
+          className={`group relative border-[1.5px] border-dashed rounded-2xl p-12 text-center transition-all duration-200 cursor-pointer select-none ${
             dragActive
-              ? "border-solid border-primary-app bg-primary-soft-app/40"
-              : "border-hairline-app hover:border-primary-app"
+              ? "border-[var(--accent)] bg-[var(--accent-hover)] shadow-[0_0_24px_var(--accent-glow)]"
+              : "border-[var(--accent)] bg-[var(--accent-soft)] hover:bg-[var(--accent-hover)] hover:shadow-[0_0_24px_var(--accent-glow)]"
           }`}
         >
           <input
@@ -695,15 +695,15 @@ export default function SyllabusUpload({
             onChange={handleFileChange}
           />
           <div className="flex flex-col items-center justify-center space-y-4 pointer-events-none">
-            {/* Animated Upload Icon */}
-            <div className="p-4 bg-white/50 dark:bg-slate-900 rounded-full border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-primary-app dark:group-hover:text-primary-app group-hover:border-primary-app/30 group-hover:shadow-md transition-all duration-300">
+            {/* Upload Icon Circle */}
+            <div className="p-4 bg-[#101010] rounded-full border border-[var(--border)] text-[var(--accent)] group-hover:scale-105 group-hover:border-[var(--accent)] transition-all duration-200 shadow-md">
               <svg width="24" height="24" className="w-6 h-6 animate-bounce shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-primary-app transition-colors">
+              <p className="text-sm font-semibold text-[var(--text)] transition-colors">
                 Click to upload or drag & drop syllabus PDF
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-550 mt-1.5 font-sans">
+              <p className="text-xs text-[var(--text-muted)] mt-1.5 font-sans">
                 Supports comprehensive syllabus or curriculum layouts in standard PDF format
               </p>
             </div>
@@ -716,13 +716,13 @@ export default function SyllabusUpload({
               value={syllabusText}
               onChange={(e) => setSyllabusText(e.target.value)}
               placeholder="Paste your subject curriculum or syllabus here. For example:&#10;Unit 1: Introduction to Web Development&#10;- HTML Basics&#10;- CSS Fundamentals&#10;- Responsive Layouts&#10;&#10;Unit 2: JavaScript Core..."
-              className="w-full h-44 p-4 text-xs bg-white/10 dark:bg-slate-950/20 text-slate-900 dark:text-slate-100 border border-slate-200/50 dark:border-white/[0.08] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-app/20 focus:border-primary-app/60 transition-all resize-none font-mono placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              className="w-full h-44 p-4 text-xs bg-[var(--bg)] text-[var(--text)] border border-[var(--border)] rounded-xl focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-glow)] transition-all resize-none font-mono placeholder:text-[var(--text-muted)]"
             />
           </div>
           <div className="flex justify-end">
             <button
               type="submit"
-              className="premium-btn premium-btn-primary px-6 py-3 font-semibold text-xs tracking-wide flex items-center gap-1.5 cursor-pointer font-sans"
+              className="px-6 py-3 bg-[var(--accent)] text-white hover:brightness-110 font-semibold text-xs tracking-wide flex items-center gap-1.5 cursor-pointer font-sans rounded-full shadow-md shadow-[var(--accent-glow)] transition-all active:scale-95"
             >
               <Sparkles className="w-4 h-4" />
               Build Tracker Using Gemini AI
@@ -738,10 +738,10 @@ export default function SyllabusUpload({
             onDragLeave={handleDrag}
             onDrop={handleDrop}
             onClick={triggerImageInput}
-            className={`group relative border-[1.5px] border-dashed rounded-xl p-12 text-center bg-bg-app transition-all duration-300 cursor-pointer ${
+            className={`group relative border-[1.5px] border-dashed rounded-2xl p-12 text-center transition-all duration-200 cursor-pointer select-none ${
               dragActive
-                ? "border-solid border-primary-app bg-primary-soft-app/40"
-                : "border-hairline-app hover:border-primary-app"
+                ? "border-[var(--accent)] bg-[var(--accent-hover)] shadow-[0_0_24px_var(--accent-glow)]"
+                : "border-[var(--accent)] bg-[var(--accent-soft)] hover:bg-[var(--accent-hover)] hover:shadow-[0_0_24px_var(--accent-glow)]"
             }`}
           >
             <input
@@ -753,14 +753,14 @@ export default function SyllabusUpload({
               onChange={handleImageInputChange}
             />
             <div className="flex flex-col items-center justify-center space-y-4 pointer-events-none">
-              <div className="p-4 bg-white/50 dark:bg-slate-900 rounded-full border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-primary-app dark:group-hover:text-primary-app group-hover:border-primary-app/30 group-hover:shadow-md transition-all duration-300">
-                <FileImage className="w-6 h-6 animate-pulse" />
+              <div className="p-4 bg-[#101010] rounded-full border border-[var(--border)] text-[var(--accent)] group-hover:scale-105 group-hover:border-[var(--accent)] transition-all duration-200 shadow-md">
+                <FileImage className="w-6 h-6 animate-pulse shrink-0" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-primary-app transition-colors">
+                <p className="text-sm font-semibold text-[var(--text)] transition-colors">
                   Click to upload or drag & drop syllabus images
                 </p>
-                <p className="text-xs text-slate-400 dark:text-slate-550 mt-1.5 font-sans">
+                <p className="text-xs text-[var(--text-muted)] mt-1.5 font-sans">
                   Supports multiple photos of printed or handwritten pages (English, Hindi, mixed Hinglish)
                 </p>
               </div>
@@ -769,12 +769,12 @@ export default function SyllabusUpload({
 
           {/* Uploaded Thumbnails list */}
           {images.length > 0 && (
-            <div className="space-y-4 bg-white/10 dark:bg-slate-950/20 p-5 border border-slate-200/30 dark:border-white/[0.06] rounded-2xl">
-              <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-wider px-1">
+            <div className="space-y-4 bg-[var(--bg)] p-5 border border-[var(--border)] rounded-2xl">
+              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] font-bold tracking-wider px-1 font-mono">
                 <span>UPLOADED SYLLABUS PAGES ({images.length})</span>
                 <button
                   onClick={() => setImages([])}
-                  className="text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 flex items-center gap-1 font-bold cursor-pointer transition-colors"
+                  className="text-rose-500 hover:text-rose-400 flex items-center gap-1 font-bold cursor-pointer transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Clear All
                 </button>
@@ -784,14 +784,14 @@ export default function SyllabusUpload({
                 {images.map((img) => (
                   <div
                     key={img.id}
-                    className="relative group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-[14px] overflow-hidden aspect-square flex flex-col justify-between shadow-xs transition-transform duration-300 hover:scale-[1.02]"
+                    className="relative group bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden aspect-square flex flex-col justify-between shadow-xs transition-transform duration-200 hover:scale-[1.02]"
                   >
                     <img
                       src={img.base64}
                       alt={img.name}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -803,7 +803,7 @@ export default function SyllabusUpload({
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-950/90 p-1.5 text-[9px] text-slate-600 dark:text-slate-400 truncate font-semibold text-center border-t border-slate-200/40 dark:border-white/[0.04]">
+                    <div className="absolute bottom-0 left-0 right-0 bg-[var(--surface)]/95 p-1.5 text-[9px] text-[var(--text-muted)] truncate font-semibold text-center border-t border-[var(--border)]">
                       {img.name}
                     </div>
                   </div>
@@ -817,8 +817,8 @@ export default function SyllabusUpload({
             <button
               onClick={handleImageSubmit}
               disabled={images.length === 0}
-              className={`premium-btn premium-btn-primary px-6 py-3 font-semibold text-xs tracking-wide flex items-center gap-1.5 cursor-pointer ${
-                images.length === 0 ? "opacity-35 cursor-not-allowed shadow-none" : "hover:scale-[1.03]"
+              className={`px-6 py-3 bg-[var(--accent)] text-white hover:brightness-110 font-semibold text-xs tracking-wide flex items-center gap-1.5 cursor-pointer font-sans rounded-full shadow-md shadow-[var(--accent-glow)] transition-all active:scale-95 ${
+                images.length === 0 ? "opacity-35 cursor-not-allowed shadow-none" : "hover:scale-[1.02]"
               }`}
             >
               <Sparkles className="w-4 h-4" />

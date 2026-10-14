@@ -7,89 +7,33 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Indigo Manuscript Design System - Light Mode */
-  --background: #F6F6FA; /* canvas */
-  --surface: #FFFFFF; /* canvas-elevated */
-  --card: #EDEDF6; /* surface-card */
-  --card-strong: #E1E1F0; /* surface-card-strong */
-  --primary: #4B3FA0; /* primary */
-  --primary-hover: #372F7D; /* primary-active */
-  --primary-soft: #E4E1F5; /* primary-soft */
-  --ink: #15151F; /* ink */
-  --body: #3A3A47; /* body */
-  --body-strong: #232330; /* body-strong */
-  --muted: #71718A; /* muted */
-  --muted-soft: #9A9AB0; /* muted-soft */
-  --hairline: #E1E1EC; /* hairline */
-  --hairline-soft: #EAEAF3; /* hairline-soft */
-  --on-primary: #FFFFFF;
-  --on-dark: #F2F1F8;
-  --on-dark-soft: #9A96B5;
-  
-  --status-overdue: #C0392B;
-  --status-overdue-bg: #F6DEDA;
-  --status-due-soon: #C08A2E;
-  --status-due-soon-bg: #F4E6C9;
-  --status-upcoming: #3D6EA6;
-  --status-upcoming-bg: #DCE6F2;
-  --status-complete: #2E8B6E;
-  --status-complete-bg: #DCEFE6;
-}
+  /* Design Tokens (Dark theme base 60/30/10) */
+  --bg: #101010;            /* page background (can go #0C0C0C for depth) */
+  --surface: #181818;       /* cards, panels */
+  --border: rgba(230,213,189,0.10);
+  --text: #E6D5BD;          /* main text */
+  --text-muted: rgba(230,213,189,0.6);
+  --accent: #D5360C;        /* orange */
+  --accent-soft: rgba(213,54,12,0.08);
+  --accent-hover: rgba(213,54,12,0.15);
+  --accent-glow: rgba(213,54,12,0.25);
 
-.dark {
-  /* Indigo Manuscript Design System - Dark Inversion (Stunning Midnight Indigo Workspace) */
-  --background: #080714; /* deepest dark blue/indigo canvas */
-  --surface: #0E0C22; /* deep indigo-slate container background */
-  --card: #13112A; /* indigo card background */
-  --card-strong: #1F1B3E; /* strong elevated card highlight background */
-  --primary: #4F46E5; /* beautiful high-contrast violet brand color */
-  --primary-hover: #4338CA;
-  --primary-soft: #1B1748;
-  --ink: #FFFFFF;
-  --body: #9693B8; /* soft purple-blue high contrast body text */
-  --body-strong: #E5E2F5;
-  --muted: #A3A1C9;
-  --muted-soft: #8481A8;
-  --hairline: #1C1938;
-  --hairline-soft: #131129;
-  --on-primary: #FFFFFF;
-  --on-dark: #F2F1F8;
-  --on-dark-soft: #9693B8;
-  
-  --status-overdue: #F87171;
-  --status-overdue-bg: #2D1418;
-  --status-due-soon: #FBBF24;
-  --status-due-soon-bg: #2B1E0A;
-  --status-upcoming: #60A5FA;
-  --status-upcoming-bg: #111B31;
-  --status-complete: #34D399;
-  --status-complete-bg: #0D281E;
-}
-
-/* Terracotta Noir Custom Aesthetic:
-   #D5360C for Background Canvas
-   #101010 for Elements & Surfaces
-   #E6D5BD for Text & Headings
-*/
-html[data-theme="terracotta"],
-html[data-theme="terracotta"].dark {
-  --background: #D5360C;
-  --surface: #101010;
-  --card: #101010;
-  --card-strong: #191919;
-  --primary: #D5360C;
+  --background: var(--bg);
+  --card: var(--surface);
+  --card-strong: #202020;
+  --primary: var(--accent);
   --primary-hover: #B82E0A;
-  --primary-soft: rgba(213, 54, 12, 0.25);
-  --ink: #E6D5BD;
-  --body: #E6D5BD;
-  --body-strong: #FFF8EE;
-  --muted: #C5B49C;
-  --muted-soft: #A8967E;
-  --hairline: #262626;
-  --hairline-soft: #1B1B1B;
-  --on-primary: #E6D5BD;
-  --on-dark: #E6D5BD;
-  --on-dark-soft: #C5B49C;
+  --primary-soft: var(--accent-soft);
+  --ink: var(--text);
+  --body: var(--text);
+  --body-strong: #FFFFFF;
+  --muted: var(--text-muted);
+  --muted-soft: var(--text-muted);
+  --hairline: var(--border);
+  --hairline-soft: var(--border);
+  --on-primary: #101010;
+  --on-dark: var(--text);
+  --on-dark-soft: var(--text-muted);
 
   --status-overdue: #FF6B6B;
   --status-overdue-bg: #2B1111;
@@ -99,6 +43,68 @@ html[data-theme="terracotta"].dark {
   --status-upcoming-bg: #111B31;
   --status-complete: #34D399;
   --status-complete-bg: #0D281E;
+}
+
+/* Dark mode explicitly sets the dark tokens */
+.dark,
+html.dark {
+  --bg: #101010;
+  --surface: #181818;
+  --border: rgba(230,213,189,0.10);
+  --text: #E6D5BD;
+  --text-muted: rgba(230,213,189,0.6);
+  --accent: #D5360C;
+  --accent-soft: rgba(213,54,12,0.08);
+  --accent-hover: rgba(213,54,12,0.15);
+  --accent-glow: rgba(213,54,12,0.25);
+
+  --background: var(--bg);
+  --card: var(--surface);
+  --card-strong: #202020;
+  --primary: var(--accent);
+  --primary-hover: #B82E0A;
+  --primary-soft: var(--accent-soft);
+  --ink: var(--text);
+  --body: var(--text);
+  --body-strong: #FFFFFF;
+  --muted: var(--text-muted);
+  --muted-soft: var(--text-muted);
+  --hairline: var(--border);
+  --hairline-soft: var(--border);
+  --on-primary: #101010;
+  --on-dark: var(--text);
+  --on-dark-soft: var(--text-muted);
+}
+
+/* Light mode (the navbar has a theme toggle) */
+html:not(.dark),
+:root:not(.dark) {
+  --bg: #E6D5BD;
+  --surface: #F1E7D6;
+  --border: rgba(16,16,16,0.12);
+  --text: #101010;
+  --text-muted: rgba(16,16,16,0.6);
+  --accent: #D5360C;
+  --accent-soft: rgba(213,54,12,0.08);
+  --accent-hover: rgba(213,54,12,0.15);
+  --accent-glow: rgba(213,54,12,0.25);
+
+  --background: var(--bg);
+  --card: var(--surface);
+  --card-strong: #E5DAC7;
+  --primary: var(--accent);
+  --primary-hover: #B82E0A;
+  --primary-soft: var(--accent-soft);
+  --ink: var(--text);
+  --body: var(--text);
+  --body-strong: #000000;
+  --muted: var(--text-muted);
+  --muted-soft: var(--text-muted);
+  --hairline: var(--border);
+  --hairline-soft: var(--border);
+  --on-primary: #FFFFFF;
+  --on-dark: var(--text);
+  --on-dark-soft: var(--text-muted);
 }
 
 @theme {
@@ -138,13 +144,20 @@ html[data-theme="terracotta"].dark {
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--background);
-  color: var(--body);
+  background-color: var(--bg);
+  color: var(--text);
+  background-image: radial-gradient(circle at 50% 0%, rgba(213, 54, 12, 0.25), transparent 60%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   position: relative;
   min-height: 100vh;
   letter-spacing: 0.01em;
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html:not(.dark) body {
+  background-image: radial-gradient(circle at 50% 0%, rgba(213, 54, 12, 0.10), transparent 60%);
 }
 
 /* Subtle Animated Noise Overlay */
@@ -316,100 +329,52 @@ body::before {
 }
 
 /* ==========================================================================
-   Terracotta Noir Specific Surfaces & Elements
-   Canvas: #D5360C | Elements/Surfaces: #101010 | Text/Headings: #E6D5BD
+   Design System Core Elements & Surfaces (60/30/10 Rule)
+   Base: var(--bg) | Surfaces: var(--surface) | Text: var(--text) | Accent: var(--accent)
    ========================================================================== */
-html[data-theme="terracotta"] body {
-  background-color: #D5360C !important;
-  color: #E6D5BD !important;
+body {
+  background-color: var(--bg);
+  color: var(--text);
 }
 
 /* Sidebar and Header Element Styling */
-html[data-theme="terracotta"] aside {
-  background-color: #101010 !important;
-  border-color: #262626 !important;
+aside {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
 }
 
-html[data-theme="terracotta"] header {
-  background-color: rgba(16, 16, 16, 0.95) !important;
-  border-color: #262626 !important;
-}
-
-/* Element background containers */
-html[data-theme="terracotta"] .bg-white,
-html[data-theme="terracotta"] .bg-slate-50,
-html[data-theme="terracotta"] .bg-slate-100,
-html[data-theme="terracotta"] .bg-slate-900,
-html[data-theme="terracotta"] .dark\:bg-slate-900,
-html[data-theme="terracotta"] .dark\:bg-slate-950,
-html[data-theme="terracotta"] .dark\:bg-slate-800,
-html[data-theme="terracotta"] .dark\:bg-slate-850,
-html[data-theme="terracotta"] .dark\:bg-\[\#080714\],
-html[data-theme="terracotta"] .dark\:bg-\[\#0E0C22\],
-html[data-theme="terracotta"] .dark\:bg-\[\#13112A\],
-html[data-theme="terracotta"] .dark\:bg-\[\#1F1B3E\] {
-  background-color: #101010 !important;
+header {
+  background-color: var(--bg) !important;
+  border-color: var(--border) !important;
 }
 
 /* Card and Surface containers */
-html[data-theme="terracotta"] .bg-card-app,
-html[data-theme="terracotta"] .bg-surface-app {
-  background-color: #101010 !important;
+.bg-card-app,
+.bg-surface-app {
+  background-color: var(--surface) !important;
 }
 
-html[data-theme="terracotta"] .bg-card-strong-app {
-  background-color: #191919 !important;
-}
-
-/* Text and Headings */
-html[data-theme="terracotta"] .text-slate-900,
-html[data-theme="terracotta"] .text-slate-800,
-html[data-theme="terracotta"] .text-slate-700,
-html[data-theme="terracotta"] .text-ink-app,
-html[data-theme="terracotta"] .dark\:text-white,
-html[data-theme="terracotta"] .dark\:text-slate-200,
-html[data-theme="terracotta"] .dark\:text-slate-100,
-html[data-theme="terracotta"] h1,
-html[data-theme="terracotta"] h2,
-html[data-theme="terracotta"] h3,
-html[data-theme="terracotta"] h4,
-html[data-theme="terracotta"] h5,
-html[data-theme="terracotta"] h6 {
-  color: #E6D5BD !important;
-}
-
-html[data-theme="terracotta"] .text-slate-500,
-html[data-theme="terracotta"] .text-slate-400,
-html[data-theme="terracotta"] .dark\:text-slate-400,
-html[data-theme="terracotta"] .dark\:text-slate-500,
-html[data-theme="terracotta"] .text-muted-app,
-html[data-theme="terracotta"] .text-muted-soft-app {
-  color: #C5B49C !important;
+.bg-card-strong-app {
+  background-color: var(--surface) !important;
 }
 
 /* Borders */
-html[data-theme="terracotta"] .border-slate-200,
-html[data-theme="terracotta"] .border-slate-150,
-html[data-theme="terracotta"] .border-slate-100,
-html[data-theme="terracotta"] .dark\:border-slate-800,
-html[data-theme="terracotta"] .dark\:border-slate-700,
-html[data-theme="terracotta"] .dark\:border-slate-850,
-html[data-theme="terracotta"] .border-hairline-app,
-html[data-theme="terracotta"] .border-hairline-soft-app {
-  border-color: #262626 !important;
+.border-hairline-app,
+.border-hairline-soft-app {
+  border-color: var(--border) !important;
 }
 
 /* Form controls */
-html[data-theme="terracotta"] input:not([type="checkbox"]):not([type="radio"]),
-html[data-theme="terracotta"] textarea,
-html[data-theme="terracotta"] select {
-  background-color: #171717 !important;
-  color: #E6D5BD !important;
-  border-color: #2C2C2C !important;
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
 }
 
-html[data-theme="terracotta"] input::placeholder,
-html[data-theme="terracotta"] textarea::placeholder {
-  color: #9A8A75 !important;
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted) !important;
 }
 
