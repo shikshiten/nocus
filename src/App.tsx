@@ -2880,7 +2880,7 @@ export default function App() {
         </header>
 
         {/* Dynamic View Main Box */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto pb-24 lg:pb-8">
           {isAddingCourse ? (
             <div className="max-w-3xl mx-auto space-y-6">
               <button
@@ -3767,6 +3767,120 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+
+      {/* ====== MOBILE GLASS BOTTOM NAVIGATION BAR ====== */}
+      {/* Only visible on mobile/tablet (hidden on lg+). Desktop uses the left sidebar. */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
+        {/* Glass container */}
+        <div
+          className="relative mx-3 mb-3 rounded-[28px] overflow-hidden"
+          style={{
+            background: themeStyle === "terracotta"
+              ? "rgba(16, 16, 16, 0.82)"
+              : darkMode
+                ? "rgba(8, 7, 20, 0.78)"
+                : "rgba(255, 255, 255, 0.72)",
+            backdropFilter: "blur(24px) saturate(1.8)",
+            WebkitBackdropFilter: "blur(24px) saturate(1.8)",
+            boxShadow: darkMode
+              ? "0 -1px 0 rgba(255,255,255,0.06), 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)"
+              : "0 -1px 0 rgba(0,0,0,0.04), 0 8px 40px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.8)",
+            border: darkMode
+              ? "1px solid rgba(255,255,255,0.08)"
+              : "1px solid rgba(0,0,0,0.07)",
+          }}
+        >
+          {/* Active tab gradient accent line at top */}
+          <div
+            className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${theme.gradient}`}
+            style={{ opacity: 0.7 }}
+          />
+
+          <div className="flex items-center justify-around px-2 py-2">
+            {[
+              { id: "dashboard",  label: "Home",      icon: LayoutDashboard },
+              { id: "checklist",  label: "Syllabus",  icon: ListTodo },
+              { id: "notes",      label: "Notes",     icon: FileText,
+                badge: currentSyllabus ? (currentSyllabus.keepNotes?.length || 0) : standaloneNotes.length },
+              { id: "analytics",  label: "Stats",     icon: LineChart },
+              { id: "settings",   label: "Settings",  icon: Settings },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSidebarTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveSidebarTab(item.id as any);
+                    setSidebarOpen(false);
+                  }}
+                  className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-2 min-w-[56px] cursor-pointer select-none transition-all duration-200 active:scale-90 rounded-2xl"
+                >
+                  {/* Active pill background */}
+                  {isActive && (
+                    <span
+                      className="absolute inset-0 rounded-2xl"
+                      style={{
+                        background: themeStyle === "terracotta"
+                          ? "rgba(213, 54, 12, 0.18)"
+                          : darkMode
+                            ? "rgba(79, 70, 229, 0.22)"
+                            : "rgba(75, 63, 160, 0.10)",
+                      }}
+                    />
+                  )}
+
+                  {/* Icon with optional badge */}
+                  <span className="relative">
+                    <Icon
+                      width={22}
+                      height={22}
+                      className="shrink-0 transition-all duration-200"
+                      style={{
+                        color: isActive
+                          ? themeStyle === "terracotta" ? "#D5360C" : darkMode ? "#818CF8" : "#4B3FA0"
+                          : darkMode ? "#6B7280" : "#9CA3AF",
+                        filter: isActive ? "drop-shadow(0 0 6px currentColor)" : "none",
+                        transform: isActive ? "scale(1.1) translateY(-1px)" : "scale(1)",
+                      }}
+                    />
+                    {/* Badge dot */}
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span
+                        className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full text-white text-[8px] font-black flex items-center justify-center px-[3px] leading-none"
+                        style={{
+                          background: themeStyle === "terracotta" ? "#D5360C" : "#4B3FA0",
+                          boxShadow: "0 0 0 2px " + (darkMode ? "rgba(8,7,20,0.9)" : "rgba(255,255,255,0.9)"),
+                        }}
+                      >
+                        {item.badge > 9 ? "9+" : item.badge}
+                      </span>
+                    )}
+                  </span>
+
+                  {/* Label */}
+                  <span
+                    className="text-[9px] font-bold tracking-wide transition-all duration-200 leading-none"
+                    style={{
+                      color: isActive
+                        ? themeStyle === "terracotta" ? "#D5360C" : darkMode ? "#818CF8" : "#4B3FA0"
+                        : darkMode ? "#6B7280" : "#9CA3AF",
+                      fontWeight: isActive ? 800 : 600,
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* iPhone home indicator safe-area padding */}
+          <div className="h-safe-bottom" style={{ height: "env(safe-area-inset-bottom, 0px)" }} />
+        </div>
+      </nav>
 
     </div>
   );
