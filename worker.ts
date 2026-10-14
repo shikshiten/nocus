@@ -291,7 +291,11 @@ Return ONLY a JSON object with this exact structure:
           return jsonResponse({ error: "Storage service is currently unavailable." }, 503);
         }
 
-        const { fileName, mimeType, folder } = (await request.json()) as any;
+        const { fileName, fileSize, mimeType, folder } = (await request.json()) as any;
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
+        if (fileSize && fileSize > MAX_SIZE) {
+          return jsonResponse({ error: "File size exceeds the 5MB limit." }, 400);
+        }
         const r2 = new S3Client({
           region: "auto",
           endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,

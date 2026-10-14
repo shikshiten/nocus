@@ -806,9 +806,9 @@ Example format:
         return res.status(400).json({ error: "fileName and userId are required." });
       }
 
-      const MAX_SIZE = 6 * 1024 * 1024; // 6MB
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
       if (fileSize && fileSize > MAX_SIZE) {
-        return res.status(400).json({ error: "File size exceeds the 6MB limit." });
+        return res.status(400).json({ error: "File size exceeds the 5MB limit." });
       }
 
       // Generate a unique key: userId/timestamp_fileName

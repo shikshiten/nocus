@@ -369,14 +369,27 @@ export default function VaultView({ user }: VaultViewProps) {
   const fetchFiles = async () => {
     setLoading(true);
     try {
+      const saved = localStorage.getItem("meridian_vault_files");
+      const localList: VaultFile[] = saved ? JSON.parse(saved) : [];
+
       if (user) {
-        const mapped = await loadVaultFilesFromTurso(user.id);
-        const purged = await autoPurgeTrash(mapped);
+        let tursoList: VaultFile[] = [];
+        try {
+          tursoList = await loadVaultFilesFromTurso(user.id);
+        } catch (tursoErr) {
+          console.warn("Turso load failed, using local vault files:", tursoErr);
+        }
+
+        // Merge Turso and local files by ID so newly uploaded files are never lost
+        const combinedMap = new Map<string, VaultFile>();
+        localList.forEach((f) => combinedMap.set(f.id, f));
+        tursoList.forEach((f) => combinedMap.set(f.id, f));
+
+        const combined = Array.from(combinedMap.values());
+        const purged = await autoPurgeTrash(combined);
         setFiles(purged);
       } else {
-        const saved = localStorage.getItem("meridian_vault_files");
-        const list: VaultFile[] = saved ? JSON.parse(saved) : [];
-        const purged = await autoPurgeTrash(list);
+        const purged = await autoPurgeTrash(localList);
         setFiles(purged);
       }
     } catch (err: any) {
@@ -417,7 +430,7 @@ export default function VaultView({ user }: VaultViewProps) {
         return;
       }
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        setErrorMsg(`File exceeds the ${MAX_FILE_SIZE_MB}MB size limit.`);
+        setErrorMsg(`File size exceeds the ${MAX_FILE_SIZE_MB}MB limit. Please upload a PDF under ${MAX_FILE_SIZE_MB}MB.`);
         setSelectedFile(null);
         return;
       }
@@ -430,9 +443,14 @@ export default function VaultView({ user }: VaultViewProps) {
     e.preventDefault();
     if (!selectedFile) return;
 
+    if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+      setErrorMsg(`File size exceeds the ${MAX_FILE_SIZE_MB}MB limit. Please select a PDF under ${MAX_FILE_SIZE_MB}MB.`);
+      return;
+    }
+
     const activeCount = files.filter((f) => !f.isTrashed).length;
     if (activeCount >= MAX_VAULT_FILES) {
-      setErrorMsg(`You have reached the maximum vault limit of ${MAX_VAULT_FILES} PDFs.`);
+      setErrorMsg(`Maximum vault limit reached (${MAX_VAULT_FILES} PDFs). You cannot upload more than ${MAX_VAULT_FILES} PDFs. Please delete an existing file first.`);
       return;
     }
 
@@ -511,7 +529,7 @@ export default function VaultView({ user }: VaultViewProps) {
 
       if (user) {
         try {
-          await syncVaultFileToTurso(newFile, user.id);
+          await syncVaultFileToTurso(newFileObj, user.id);
         } catch (e) {
           console.error("Error saving file to Turso:", e);
         }
@@ -521,6 +539,9 @@ export default function VaultView({ user }: VaultViewProps) {
       const list = saved ? JSON.parse(saved) : [];
       const updatedList = [newFileObj, ...list.filter((f: any) => f.id !== newFileObj.id)];
       localStorage.setItem("meridian_vault_files", JSON.stringify(updatedList));
+
+      // Immediately display the uploaded file in the UI
+      setFiles((prev) => [newFileObj, ...prev.filter((f) => f.id !== newFileObj.id)]);
 
       setUploadProgress(100);
       setSuccessMsg("PDF uploaded to Vault successfully!");

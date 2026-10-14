@@ -176,5 +176,5 @@ export const FOLDER_THEMES: Record<string, FolderTheme> = {
 };
 
 export const MAX_VAULT_FILES = 7;
-export const MAX_FILE_SIZE_MB = 6;
+export const MAX_FILE_SIZE_MB = 5;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
