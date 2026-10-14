@@ -690,6 +690,65 @@ export default function AccountSettings({
                     </div>
                   </div>
 
+                  {/* Primary Accent & Highlight Color Selector */}
+                  <div className="md:col-span-2 p-4 sm:p-5 bg-card-app border border-hairline-soft-app rounded-2xl space-y-3.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary-soft-app text-primary-app flex items-center justify-center shrink-0">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-ink-app">Accent & Highlight Color</h4>
+                          <p className="text-[10px] text-muted-app mt-0.5">Customize buttons, active rings, charts and highlight accents</p>
+                        </div>
+                      </div>
+                      <div className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-primary-soft-app text-primary-app font-bold capitalize border border-primary-app/20 self-start sm:self-auto">
+                        Current: {primaryColor}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5 pt-1">
+                      {[
+                        { id: "indigo", name: "Indigo", hex: "#4F46E5" },
+                        { id: "violet", name: "Violet", hex: "#8B5CF6" },
+                        { id: "emerald", name: "Emerald", hex: "#10B981" },
+                        { id: "rose", name: "Rose", hex: "#F43F5E" },
+                        { id: "amber", name: "Amber", hex: "#F59E0B" },
+                        { id: "terracotta", name: "Terracotta", hex: "#D5360C" },
+                      ].map((c) => {
+                        const isActive = primaryColor === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              onUpdatePrimaryColor(c.id);
+                              triggerSuccess(`Accent color set to ${c.name}!`);
+                            }}
+                            className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-2 ${
+                              isActive
+                                ? "border-primary-app ring-2 ring-primary-app/30 bg-card-strong-app/60 shadow-sm"
+                                : "border-hairline-soft-app hover:border-hairline-app bg-card-app hover:bg-card-strong-app/20"
+                            }`}
+                          >
+                            <div className="relative">
+                              <span
+                                className="w-6 h-6 rounded-full inline-block shadow-sm"
+                                style={{ backgroundColor: c.hex }}
+                              />
+                              {isActive && (
+                                <div className="absolute inset-0 flex items-center justify-center text-white drop-shadow-sm">
+                                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-[11px] font-bold text-ink-app">{c.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Dark Mode Theme */}
                   <div className="p-4 bg-card-app border border-hairline-soft-app rounded-2xl flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5 min-w-0">
@@ -906,11 +965,19 @@ export default function AccountSettings({
           {activeTab === "about" && (
             <div className="bg-card-app border border-hairline-soft-app p-6 rounded-[24px] space-y-6 animate-fade-in">
               <div className="text-center py-4">
-                <div className="inline-flex p-3 bg-primary-soft-app/20 text-primary-app rounded-2xl mb-2.5">
-                  <Sparkles className="w-6 h-6 animate-pulse text-primary-app" />
+                <div className="inline-flex w-14 h-14 p-1 rounded-2xl mb-2.5 shadow-md shadow-primary-app/20 items-center justify-center">
+                  <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
                 </div>
-                <h3 className="text-lg font-black text-ink-app tracking-tight">Syllabus Tracker & Planner</h3>
-                <p className="text-[11px] text-muted-soft-app mt-0.5 font-bold uppercase tracking-widest font-mono">Meridian Workspace Ecosystem</p>
+                <div className="flex flex-col items-center leading-none mb-1">
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-primary-app font-mono mb-0.5">
+                    beta
+                  </span>
+                  <span className="font-sans text-xl font-black tracking-tight text-ink-app">
+                    nocus
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-ink-app tracking-tight mt-1">Syllabus Tracker & Planner</h3>
+                <p className="text-[11px] text-muted-soft-app mt-0.5 font-bold uppercase tracking-widest font-mono">Nocus Workspace Ecosystem</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -7,33 +7,113 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Design Tokens (Dark theme base 60/30/10) */
-  --bg: #101010;            /* page background (can go #0C0C0C for depth) */
-  --surface: #181818;       /* cards, panels */
-  --border: rgba(230,213,189,0.10);
-  --text: #E6D5BD;          /* main text */
-  --text-muted: rgba(230,213,189,0.6);
-  --accent: #D5360C;        /* orange */
-  --accent-soft: rgba(213,54,12,0.08);
-  --accent-hover: rgba(213,54,12,0.15);
-  --accent-glow: rgba(213,54,12,0.25);
+  /* Default Theme (Indigo Manuscript) - Light Mode */
+  --background: #F6F6FA;
+  --surface: #FFFFFF;
+  --card: #EDEDF6;
+  --card-strong: #E1E1F0;
+  --primary: #4B3FA0;
+  --primary-hover: #372F7D;
+  --primary-soft: #E4E1F5;
+  --ink: #15151F;
+  --body: #3A3A47;
+  --body-strong: #232330;
+  --muted: #71718A;
+  --muted-soft: #9A9AB0;
+  --hairline: #E1E1EC;
+  --hairline-soft: #EAEAF3;
+  --on-primary: #FFFFFF;
+  --on-dark: #F2F1F8;
+  --on-dark-soft: #9A96B5;
+  
+  --bg: var(--background);
+  --border: var(--hairline);
+  --text: var(--ink);
+  --text-muted: var(--muted);
+  --accent: var(--primary);
+  --accent-soft: rgba(75, 63, 160, 0.08);
+  --accent-hover: rgba(75, 63, 160, 0.15);
+  --accent-glow: rgba(75, 63, 160, 0.25);
 
-  --background: var(--bg);
-  --card: var(--surface);
+  --status-overdue: #C0392B;
+  --status-overdue-bg: #F6DEDA;
+  --status-due-soon: #C08A2E;
+  --status-due-soon-bg: #F4E6C9;
+  --status-upcoming: #3D6EA6;
+  --status-upcoming-bg: #DCE6F2;
+  --status-complete: #2E8B6E;
+  --status-complete-bg: #DCEFE6;
+}
+
+/* Default Theme - Dark Mode (Midnight Indigo) */
+.dark,
+html.dark {
+  --background: #080714;
+  --surface: #0E0C22;
+  --card: #13112A;
+  --card-strong: #1F1B3E;
+  --primary: #4F46E5;
+  --primary-hover: #4338CA;
+  --primary-soft: #1B1748;
+  --ink: #FFFFFF;
+  --body: #9693B8;
+  --body-strong: #E5E2F5;
+  --muted: #A3A1C9;
+  --muted-soft: #8481A8;
+  --hairline: #1C1938;
+  --hairline-soft: #131129;
+  --on-primary: #FFFFFF;
+  --on-dark: #F2F1F8;
+  --on-dark-soft: #9693B8;
+
+  --bg: var(--background);
+  --border: var(--hairline);
+  --text: var(--ink);
+  --text-muted: var(--muted);
+  --accent: var(--primary);
+  --accent-soft: rgba(79, 70, 229, 0.12);
+  --accent-hover: rgba(79, 70, 229, 0.20);
+  --accent-glow: rgba(79, 70, 229, 0.30);
+
+  --status-overdue: #F87171;
+  --status-overdue-bg: #2D1418;
+  --status-due-soon: #FBBF24;
+  --status-due-soon-bg: #2B1E0A;
+  --status-upcoming: #60A5FA;
+  --status-upcoming-bg: #111B31;
+  --status-complete: #34D399;
+  --status-complete-bg: #0D281E;
+}
+
+/* Terracotta Noir Custom Aesthetic (60/30/10 Rule) - Dark Mode */
+html[data-theme="terracotta"],
+html[data-theme="terracotta"].dark {
+  --background: #101010;
+  --surface: #181818;
+  --card: #181818;
   --card-strong: #202020;
-  --primary: var(--accent);
+  --primary: #D5360C;
   --primary-hover: #B82E0A;
-  --primary-soft: var(--accent-soft);
-  --ink: var(--text);
-  --body: var(--text);
+  --primary-soft: rgba(213, 54, 12, 0.15);
+  --ink: #E6D5BD;
+  --body: #E6D5BD;
   --body-strong: #FFFFFF;
-  --muted: var(--text-muted);
-  --muted-soft: var(--text-muted);
-  --hairline: var(--border);
-  --hairline-soft: var(--border);
-  --on-primary: #101010;
-  --on-dark: var(--text);
-  --on-dark-soft: var(--text-muted);
+  --muted: rgba(230, 213, 189, 0.65);
+  --muted-soft: rgba(230, 213, 189, 0.45);
+  --hairline: rgba(230, 213, 189, 0.10);
+  --hairline-soft: rgba(230, 213, 189, 0.06);
+  --on-primary: #FFFFFF;
+  --on-dark: #E6D5BD;
+  --on-dark-soft: rgba(230, 213, 189, 0.65);
+
+  --bg: var(--background);
+  --border: var(--hairline);
+  --text: var(--ink);
+  --text-muted: var(--muted);
+  --accent: #D5360C;
+  --accent-soft: rgba(213, 54, 12, 0.08);
+  --accent-hover: rgba(213, 54, 12, 0.15);
+  --accent-glow: rgba(213, 54, 12, 0.25);
 
   --status-overdue: #FF6B6B;
   --status-overdue-bg: #2B1111;
@@ -45,66 +125,34 @@
   --status-complete-bg: #0D281E;
 }
 
-/* Dark mode explicitly sets the dark tokens */
-.dark,
-html.dark {
-  --bg: #101010;
-  --surface: #181818;
-  --border: rgba(230,213,189,0.10);
-  --text: #E6D5BD;
-  --text-muted: rgba(230,213,189,0.6);
-  --accent: #D5360C;
-  --accent-soft: rgba(213,54,12,0.08);
-  --accent-hover: rgba(213,54,12,0.15);
-  --accent-glow: rgba(213,54,12,0.25);
-
-  --background: var(--bg);
-  --card: var(--surface);
-  --card-strong: #202020;
-  --primary: var(--accent);
-  --primary-hover: #B82E0A;
-  --primary-soft: var(--accent-soft);
-  --ink: var(--text);
-  --body: var(--text);
-  --body-strong: #FFFFFF;
-  --muted: var(--text-muted);
-  --muted-soft: var(--text-muted);
-  --hairline: var(--border);
-  --hairline-soft: var(--border);
-  --on-primary: #101010;
-  --on-dark: var(--text);
-  --on-dark-soft: var(--text-muted);
-}
-
-/* Light mode (the navbar has a theme toggle) */
-html:not(.dark),
-:root:not(.dark) {
-  --bg: #E6D5BD;
+/* Terracotta Noir Custom Aesthetic - Light Mode */
+html[data-theme="terracotta"]:not(.dark) {
+  --background: #E6D5BD;
   --surface: #F1E7D6;
-  --border: rgba(16,16,16,0.12);
-  --text: #101010;
-  --text-muted: rgba(16,16,16,0.6);
-  --accent: #D5360C;
-  --accent-soft: rgba(213,54,12,0.08);
-  --accent-hover: rgba(213,54,12,0.15);
-  --accent-glow: rgba(213,54,12,0.25);
-
-  --background: var(--bg);
-  --card: var(--surface);
-  --card-strong: #E5DAC7;
-  --primary: var(--accent);
+  --card: #EDE1CD;
+  --card-strong: #E2D3BC;
+  --primary: #D5360C;
   --primary-hover: #B82E0A;
-  --primary-soft: var(--accent-soft);
-  --ink: var(--text);
-  --body: var(--text);
+  --primary-soft: rgba(213, 54, 12, 0.15);
+  --ink: #101010;
+  --body: #202020;
   --body-strong: #000000;
-  --muted: var(--text-muted);
-  --muted-soft: var(--text-muted);
-  --hairline: var(--border);
-  --hairline-soft: var(--border);
+  --muted: rgba(16, 16, 16, 0.65);
+  --muted-soft: rgba(16, 16, 16, 0.45);
+  --hairline: rgba(16, 16, 16, 0.12);
+  --hairline-soft: rgba(16, 16, 16, 0.06);
   --on-primary: #FFFFFF;
-  --on-dark: var(--text);
-  --on-dark-soft: var(--text-muted);
+  --on-dark: #101010;
+  --on-dark-soft: rgba(16, 16, 16, 0.65);
+
+  --bg: var(--background);
+  --border: var(--hairline);
+  --text: var(--ink);
+  --text-muted: var(--muted);
+  --accent: #D5360C;
+  --accent-soft: rgba(213, 54, 12, 0.08);
+  --accent-hover: rgba(213, 54, 12, 0.15);
+  --accent-glow: rgba(213, 54, 12, 0.25);
 }
 
 @theme {
@@ -144,11 +192,8 @@ html:not(.dark),
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--bg);
-  color: var(--text);
-  background-image: radial-gradient(circle at 50% 0%, rgba(213, 54, 12, 0.25), transparent 60%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-color: var(--background);
+  color: var(--body);
   position: relative;
   min-height: 100vh;
   letter-spacing: 0.01em;
@@ -156,7 +201,13 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-html:not(.dark) body {
+html[data-theme="terracotta"] body {
+  background-image: radial-gradient(circle at 50% 0%, rgba(213, 54, 12, 0.25), transparent 60%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+html[data-theme="terracotta"]:not(.dark) body {
   background-image: radial-gradient(circle at 50% 0%, rgba(213, 54, 12, 0.10), transparent 60%);
 }
 
@@ -328,53 +379,10 @@ body::before {
   will-change: transform;
 }
 
-/* ==========================================================================
-   Design System Core Elements & Surfaces (60/30/10 Rule)
-   Base: var(--bg) | Surfaces: var(--surface) | Text: var(--text) | Accent: var(--accent)
-   ========================================================================== */
-body {
-  background-color: var(--bg);
-  color: var(--text);
+
+/* Smooth theme transition */
+html, body {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
 
-/* Sidebar and Header Element Styling */
-aside {
-  background-color: var(--surface) !important;
-  border-color: var(--border) !important;
-}
-
-header {
-  background-color: var(--bg) !important;
-  border-color: var(--border) !important;
-}
-
-/* Card and Surface containers */
-.bg-card-app,
-.bg-surface-app {
-  background-color: var(--surface) !important;
-}
-
-.bg-card-strong-app {
-  background-color: var(--surface) !important;
-}
-
-/* Borders */
-.border-hairline-app,
-.border-hairline-soft-app {
-  border-color: var(--border) !important;
-}
-
-/* Form controls */
-input:not([type="checkbox"]):not([type="radio"]),
-textarea,
-select {
-  background-color: var(--bg) !important;
-  color: var(--text) !important;
-  border-color: var(--border) !important;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: var(--text-muted) !important;
-}
 

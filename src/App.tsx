@@ -587,7 +587,9 @@ export default function App() {
     const saved = localStorage.getItem("weeklyTarget");
     return saved ? Number(saved) : 5;
   });
-  const [primaryColor, setPrimaryColor] = useState("indigo");
+  const [primaryColor, setPrimaryColor] = useState<string>(() => {
+    return localStorage.getItem("primaryColor") || "indigo";
+  });
   const [customAvatar, setCustomAvatar] = useState(() => {
     return localStorage.getItem("customAvatar") || "";
   });
@@ -608,6 +610,108 @@ export default function App() {
     return (localStorage.getItem("themeStyle") as "default" | "terracotta") || "default";
   });
 
+  const getThemeConfig = (color: string) => {
+    switch (color) {
+      case "violet":
+        return {
+          bg: "bg-violet-600 dark:bg-violet-500",
+          bgHover: "hover:bg-violet-700 dark:hover:bg-violet-600",
+          text: "text-violet-600 dark:text-violet-400",
+          border: "border-violet-100 dark:border-violet-950/50",
+          borderPrimary: "border-violet-500",
+          gradient: "from-violet-600 to-fuchsia-600",
+          gradientBg: "bg-violet-50/40 dark:bg-[#110e20]/20",
+          badge: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+          ring: "ring-violet-500/20",
+          shadow: "shadow-violet-500/15",
+          accentBg: "bg-violet-600 text-white shadow-xs",
+          textMuted: "text-violet-500 dark:text-violet-400",
+          hex: "#8b5cf6",
+        };
+      case "emerald":
+        return {
+          bg: "bg-emerald-600 dark:bg-emerald-500",
+          bgHover: "hover:bg-emerald-700 dark:hover:bg-emerald-600",
+          text: "text-emerald-600 dark:text-emerald-400",
+          border: "border-emerald-100 dark:border-emerald-950/50",
+          borderPrimary: "border-emerald-500",
+          gradient: "from-emerald-500 to-teal-600",
+          gradientBg: "bg-emerald-50/40 dark:bg-[#0c1a12]/20",
+          badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+          ring: "ring-emerald-500/20",
+          shadow: "shadow-emerald-500/15",
+          accentBg: "bg-emerald-600 text-white shadow-xs",
+          textMuted: "text-emerald-500 dark:text-emerald-400",
+          hex: "#10b981",
+        };
+      case "rose":
+        return {
+          bg: "bg-rose-600 dark:bg-rose-500",
+          bgHover: "hover:bg-rose-700 dark:hover:bg-rose-600",
+          text: "text-rose-600 dark:text-rose-400",
+          border: "border-rose-100 dark:border-rose-950/50",
+          borderPrimary: "border-rose-500",
+          gradient: "from-rose-500 to-pink-600",
+          gradientBg: "bg-rose-50/40 dark:bg-[#1f0e12]/20",
+          badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+          ring: "ring-rose-500/20",
+          shadow: "shadow-rose-500/15",
+          accentBg: "bg-rose-600 text-white shadow-xs",
+          textMuted: "text-rose-500 dark:text-rose-400",
+          hex: "#f43f5e",
+        };
+      case "amber":
+        return {
+          bg: "bg-amber-500 dark:bg-amber-550",
+          bgHover: "hover:bg-amber-600 dark:hover:bg-amber-500",
+          text: "text-amber-600 dark:text-amber-400",
+          border: "border-amber-100 dark:border-amber-950/50",
+          borderPrimary: "border-amber-500",
+          gradient: "from-amber-500 to-orange-500",
+          gradientBg: "bg-amber-50/40 dark:bg-[#1f160e]/20",
+          badge: "bg-amber-100 text-amber-750 dark:bg-amber-900/40 dark:text-amber-300",
+          ring: "ring-amber-500/20",
+          shadow: "shadow-amber-500/15",
+          accentBg: "bg-amber-500 text-white shadow-xs",
+          textMuted: "text-amber-500 dark:text-amber-400",
+          hex: "#f59e0b",
+        };
+      case "terracotta":
+        return {
+          bg: "bg-[#D5360C]",
+          bgHover: "hover:bg-[#B82E0A]",
+          text: "text-[#D5360C]",
+          border: "border-[#D5360C]/20",
+          borderPrimary: "border-[#D5360C]",
+          gradient: "from-[#D5360C] to-[#E6D5BD]",
+          gradientBg: "bg-[#D5360C]/10",
+          badge: "bg-[#D5360C]/20 text-[#D5360C]",
+          ring: "ring-[#D5360C]/30",
+          shadow: "shadow-[#D5360C]/20",
+          accentBg: "bg-[#D5360C] text-white shadow-xs",
+          textMuted: "text-[#D5360C]/70",
+          hex: "#D5360C",
+        };
+      case "indigo":
+      default:
+        return {
+          bg: "bg-[#4F46E5] dark:bg-[#4F46E5]",
+          bgHover: "hover:bg-[#4338CA]",
+          text: "text-[#4F46E5] dark:text-[#818CF8]",
+          border: "border-indigo-100 dark:border-indigo-950/50",
+          borderPrimary: "border-[#4F46E5]",
+          gradient: "from-[#4F46E5] to-[#6366F1] dark:to-[#818CF8]",
+          gradientBg: "bg-indigo-50/40 dark:bg-[#110e20]/20",
+          badge: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+          ring: "ring-indigo-500/20",
+          shadow: "shadow-indigo-500/15",
+          accentBg: "bg-[#4F46E5] text-white shadow-xs",
+          textMuted: "text-indigo-500 dark:text-indigo-400",
+          hex: "#4F46E5",
+        };
+    }
+  };
+
   useEffect(() => {
     if (themeStyle === "terracotta") {
       document.documentElement.setAttribute("data-theme", "terracotta");
@@ -616,6 +720,19 @@ export default function App() {
     }
     localStorage.setItem("themeStyle", themeStyle);
   }, [themeStyle]);
+
+  useEffect(() => {
+    const config = getThemeConfig(primaryColor);
+    if (config?.hex) {
+      document.documentElement.style.setProperty("--primary", config.hex);
+      document.documentElement.style.setProperty("--accent", config.hex);
+      document.documentElement.style.setProperty("--primary-soft", `${config.hex}22`);
+      document.documentElement.style.setProperty("--accent-soft", `${config.hex}18`);
+      document.documentElement.style.setProperty("--accent-glow", `${config.hex}40`);
+    }
+    document.documentElement.setAttribute("data-primary-color", primaryColor);
+    localStorage.setItem("primaryColor", primaryColor);
+  }, [primaryColor, themeStyle]);
 
   const handleUpdateThemeStyle = (style: "default" | "terracotta") => {
     setThemeStyle(style);
@@ -731,93 +848,7 @@ export default function App() {
     localStorage.setItem("primaryColor", color);
   };
 
-  const getThemeConfig = (color: string) => {
-    switch (color) {
-      case "violet":
-        return {
-          bg: "bg-violet-600 dark:bg-violet-500",
-          bgHover: "hover:bg-violet-700 dark:hover:bg-violet-600",
-          text: "text-violet-600 dark:text-violet-400",
-          border: "border-violet-100 dark:border-violet-950/50",
-          borderPrimary: "border-violet-500",
-          gradient: "from-violet-600 to-fuchsia-600",
-          gradientBg: "bg-violet-50/40 dark:bg-[#110e20]/20",
-          badge: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-          ring: "ring-violet-500/20",
-          shadow: "shadow-violet-500/15",
-          accentBg: "bg-violet-600 text-white shadow-xs",
-          textMuted: "text-violet-500 dark:text-violet-400",
-          hex: "#8b5cf6",
-        };
-      case "emerald":
-        return {
-          bg: "bg-emerald-600 dark:bg-emerald-500",
-          bgHover: "hover:bg-emerald-700 dark:hover:bg-emerald-600",
-          text: "text-emerald-600 dark:text-emerald-400",
-          border: "border-emerald-100 dark:border-emerald-950/50",
-          borderPrimary: "border-emerald-500",
-          gradient: "from-emerald-500 to-teal-600",
-          gradientBg: "bg-emerald-50/40 dark:bg-[#0c1a12]/20",
-          badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-          ring: "ring-emerald-500/20",
-          shadow: "shadow-emerald-500/15",
-          accentBg: "bg-emerald-600 text-white shadow-xs",
-          textMuted: "text-emerald-500 dark:text-emerald-400",
-          hex: "#10b981",
-        };
-      case "rose":
-        return {
-          bg: "bg-rose-600 dark:bg-rose-500",
-          bgHover: "hover:bg-rose-700 dark:hover:bg-rose-600",
-          text: "text-rose-600 dark:text-rose-400",
-          border: "border-rose-100 dark:border-rose-950/50",
-          borderPrimary: "border-rose-500",
-          gradient: "from-rose-500 to-pink-600",
-          gradientBg: "bg-rose-50/40 dark:bg-[#1f0e12]/20",
-          badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-          ring: "ring-rose-500/20",
-          shadow: "shadow-rose-500/15",
-          accentBg: "bg-rose-600 text-white shadow-xs",
-          textMuted: "text-rose-500 dark:text-rose-400",
-          hex: "#f43f5e",
-        };
-      case "amber":
-        return {
-          bg: "bg-amber-500 dark:bg-amber-550",
-          bgHover: "hover:bg-amber-600 dark:hover:bg-amber-500",
-          text: "text-amber-600 dark:text-amber-400",
-          border: "border-amber-100 dark:border-amber-950/50",
-          borderPrimary: "border-amber-500",
-          gradient: "from-amber-500 to-orange-500",
-          gradientBg: "bg-amber-50/40 dark:bg-[#1f160e]/20",
-          badge: "bg-amber-100 text-amber-750 dark:bg-amber-900/40 dark:text-amber-300",
-          ring: "ring-amber-500/20",
-          shadow: "shadow-amber-500/15",
-          accentBg: "bg-amber-500 text-white shadow-xs",
-          textMuted: "text-amber-500 dark:text-amber-400",
-          hex: "#f59e0b",
-        };
-      case "indigo":
-      default:
-        return {
-          bg: "bg-primary-app",
-          bgHover: "hover:bg-primary-active-app",
-          text: "text-primary-app",
-          border: "border-hairline-app",
-          borderPrimary: "border-primary-app",
-          gradient: themeStyle === "terracotta"
-            ? "from-[#D5360C] to-[#E6D5BD]"
-            : "from-primary-app to-[#6366F1] dark:to-[#818CF8]",
-          gradientBg: "bg-card-app/40 dark:bg-[#2C2924]/20",
-          badge: "bg-primary-soft-app/40 text-primary-active-app dark:bg-primary-soft-app/10 dark:text-primary-app",
-          ring: "ring-primary-app/20",
-          shadow: "shadow-primary-app/15",
-          accentBg: "bg-primary-app text-white shadow-xs shadow-primary-app/10",
-          textMuted: "text-muted-app",
-          hex: themeStyle === "terracotta" ? "#D5360C" : "#4B3FA0",
-        };
-    }
-  };
+
 
   // Load syllabuses from Supabase
   const loadSyllabusesFromSupabase = async (uid: string) => {
@@ -2341,14 +2372,18 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#070913] flex flex-col items-center justify-center font-sans">
-        <div className="flex flex-col items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 via-[#352DB0] to-[#5143CC] flex items-center justify-center text-white font-black text-xl shadow-2xl shadow-violet-500/20 animate-bounce">
-            M
+      <div className="min-h-screen bg-bg-app flex flex-col items-center justify-center font-sans">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center p-1 shadow-2xl shadow-primary-app/20 animate-pulse">
+            <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
           </div>
-          <div className="flex items-center gap-2 bg-slate-900/40 px-3.5 py-1.5 rounded-full border border-white/[0.06]">
-            <Loader2 className="w-3.5 h-3.5 text-violet-400 animate-spin" />
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Loading Meridian...</span>
+          <div className="flex flex-col items-center leading-none gap-0.5">
+            <span className="text-[9px] font-extrabold uppercase tracking-widest text-primary-app font-mono">beta</span>
+            <span className="font-sans text-xl font-black tracking-tight text-ink-app">nocus</span>
+          </div>
+          <div className="flex items-center gap-2 bg-card-app/60 px-3.5 py-1.5 rounded-full border border-hairline-soft-app mt-2">
+            <Loader2 className="w-3.5 h-3.5 text-primary-app animate-spin" />
+            <span className="text-[10px] font-bold text-muted-app uppercase tracking-widest">Loading nocus...</span>
           </div>
         </div>
       </div>
@@ -2372,12 +2407,17 @@ export default function App() {
       {/* 1. Desktop Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 w-60 bg-bg-app flex flex-col hidden lg:flex select-none border-r border-hairline-soft-app">
         {/* Brand Header */}
-        <div className="h-24 flex items-center gap-2.5 px-6 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 via-[#352DB0] to-[#5143CC] flex items-center justify-center text-white font-black text-sm shadow-lg shadow-primary-app/25">
-            M
+        <div className="h-24 flex items-center gap-3 px-6 shrink-0">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-md shadow-primary-app/20 p-0.5">
+            <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
           </div>
-          <div className="flex flex-col">
-            <span className="font-sans text-base font-black tracking-tight text-ink-app leading-none">Meridian</span>
+          <div className="flex flex-col justify-center leading-none">
+            <span className="text-[9px] font-extrabold uppercase tracking-widest text-primary-app font-mono leading-none mb-1 select-none">
+              beta
+            </span>
+            <span className="font-sans text-xl font-black tracking-tight text-ink-app leading-none">
+              nocus
+            </span>
           </div>
         </div>
 
@@ -2437,8 +2477,18 @@ export default function App() {
               className="absolute inset-y-0 left-0 w-60 bg-bg-app flex flex-col p-4 shadow-2xl"
             >
               <div className="flex items-center justify-between pb-4 border-b border-hairline-soft-app">
-                <div className="flex flex-col">
-                  <span className="font-serif text-2xl font-bold tracking-tight text-ink-app">Meridian</span>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-sm p-0.5">
+                    <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
+                  </div>
+                  <div className="flex flex-col justify-center leading-none">
+                    <span className="text-[8px] font-extrabold uppercase tracking-widest text-primary-app font-mono leading-none mb-0.5">
+                      beta
+                    </span>
+                    <span className="font-sans text-lg font-black tracking-tight text-ink-app leading-none">
+                      nocus
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={() => setSidebarOpen(false)}
@@ -2944,7 +2994,7 @@ export default function App() {
                       />
 
                       {!user && (
-                        <div className="p-4 bg-[rgba(213,54,12,0.12)] text-[var(--text)] text-xs rounded-2xl border border-[var(--accent)] text-center max-w-lg mx-auto transition-colors">
+                        <div className="p-4 bg-[var(--accent-soft)] text-[var(--text)] text-xs rounded-2xl border border-[var(--accent)] text-center max-w-lg mx-auto transition-colors">
                           💡 <strong>Guest Mode:</strong> Your data is saved locally on this browser.{" "}
                           <button onClick={handleLogin} className="underline font-bold text-[var(--accent)] hover:brightness-125 cursor-pointer transition-all">
                             Sign in with Google

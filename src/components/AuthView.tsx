@@ -141,18 +141,23 @@ export default function AuthView({ onGuestMode, primaryColor = "indigo" }: AuthV
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="inline-flex p-3 bg-gradient-to-tr from-violet-600 to-indigo-600 text-white rounded-2xl shadow-xl shadow-violet-500/15 mb-4 border border-violet-500/20"
+            className="inline-flex w-16 h-16 rounded-2xl shadow-xl shadow-primary-app/20 mb-3 p-1 items-center justify-center bg-white/5 backdrop-blur-md border border-white/10"
           >
-            <GraduationCap className="w-8 h-8" />
+            <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
           </motion.div>
-          <motion.h1 
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="text-4xl font-black tracking-tight text-white font-serif leading-none"
-          >
-            Meridian
-          </motion.h1>
+          <div className="flex flex-col items-center leading-none">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 font-mono mb-1">
+              beta
+            </span>
+            <motion.h1 
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="text-4xl font-black tracking-tight text-white font-sans leading-none"
+            >
+              nocus
+            </motion.h1>
+          </div>
         </div>
 
         {/* Auth Card */}

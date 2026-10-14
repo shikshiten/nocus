@@ -3,21 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Nocus - Intelligent Syllabus Tracker & Academic Mentor</title>
+    <title>nocus (beta) — Intelligent Syllabus Tracker & Academic Mentor</title>
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#4B3FA0" />
+    <meta name="theme-color" content="#4F46E5" />
     <meta name="color-scheme" content="dark light" />
     <meta name="description" content="AI-Powered Syllabus Tracker, Pomodoro Focus Timer, Active Recall & Academic Study Mentor" />
     
     <!-- iOS PWA Support -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Nocus" />
-    <link rel="apple-touch-icon" href="/icon-192.svg" />
+    <meta name="apple-mobile-web-app-title" content="nocus" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     
     <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     <!-- Instant Theme Hydration to prevent theme flash -->
@@ -28,6 +31,10 @@
         }
         if (localStorage.getItem("darkMode") === "true") {
           document.documentElement.classList.add("dark");
+        }
+        var savedPrimary = localStorage.getItem("primaryColor");
+        if (savedPrimary) {
+          document.documentElement.setAttribute("data-primary-color", savedPrimary);
         }
       } catch (e) {}
     </script>
