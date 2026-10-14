@@ -916,7 +916,7 @@ export default function VaultView({ user }: VaultViewProps) {
       {!user && (
         <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs rounded-2xl flex items-center gap-2 font-medium">
           <span>💡</span>
-          <span><strong>Guest Mode:</strong> Your files are uploaded to Cloudflare R2, but saved locally in this browser. Sign in to sync across devices.</span>
+          <span><strong>Guest Mode:</strong> Your files are stored safely in cloud storage, but saved locally in this browser. Sign in to sync across devices.</span>
         </div>
       )}
 
@@ -1680,7 +1680,7 @@ export default function VaultView({ user }: VaultViewProps) {
                   {uploading && (
                     <div className="space-y-1.5 pt-2">
                       <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                        <span>Uploading directly to Cloudflare R2...</span>
+                        <span>Uploading...</span>
                         <span>{uploadProgress}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-850 rounded-full overflow-hidden">

@@ -5,10 +5,11 @@ import { motion } from "motion/react";
 
 interface AuthViewProps {
   onGuestMode: () => void;
+  onShowLanding?: () => void;
   primaryColor?: string;
 }
 
-export default function AuthView({ onGuestMode }: AuthViewProps) {
+export default function AuthView({ onGuestMode, onShowLanding }: AuthViewProps) {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
 
   return (
@@ -160,19 +161,28 @@ export default function AuthView({ onGuestMode }: AuthViewProps) {
           )}
         </div>
 
-        {/* Guest Mode Button */}
+        {/* Guest Mode and Landing Overview Buttons */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="text-center mt-6"
+          className="flex flex-col items-center gap-2.5 mt-6"
         >
           <button
             onClick={onGuestMode}
-            className="text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 border border-white/10 px-4 py-2 rounded-full shadow-sm hover:border-white/20 select-none"
+            className="text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 border border-white/10 px-5 py-2.5 rounded-full shadow-sm hover:border-white/20 select-none"
           >
             Continue as Guest (Offline Mode)
           </button>
+
+          {onShowLanding && (
+            <button
+              onClick={onShowLanding}
+              className="text-xs font-semibold text-indigo-400/80 hover:text-indigo-300 transition-colors cursor-pointer hover:underline select-none"
+            >
+              ✨ View App Overview & Features
+            </button>
+          )}
         </motion.div>
       </div>
     </div>

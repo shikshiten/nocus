@@ -328,8 +328,7 @@ export default function AccountSettings({
               <div className="space-y-1">
                 {[
                   { id: "general", label: "General", desc: "Profile & preferences", icon: User },
-                  { id: "sync", label: "Sync & Backup", desc: "Cloud sync & data backup", icon: CloudLightning },
-                  { id: "about", label: "About App", desc: "Information & updates", icon: Info }
+                  { id: "about", label: "About App", desc: "Information & overview", icon: Info }
                 ].map(item => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id || (item.id === "general" && (activeTab === "notifications" || activeTab === "privacy"));
@@ -532,16 +531,9 @@ export default function AccountSettings({
                       )}
                     </div>
                     
-                    <p className="text-[11px] text-white/75 font-medium font-mono leading-none">
-                      {user ? user.email : "Local Offline Guest Mode"}
+                    <p className="text-xs text-white/80 font-medium leading-none">
+                      {user ? "Active Scholar • Student Account" : "Guest Mode • Offline Ready"}
                     </p>
-
-                    <div className="flex items-center gap-1.5 pt-0.5 justify-center sm:justify-start">
-                      <CheckCircle className="w-4 h-4 text-emerald-300" />
-                      <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest font-mono">
-                        {user ? "LOCAL & CLOUD SECURED" : "LOCAL BROWSER STORAGE ONLY"}
-                      </span>
-                    </div>
                   </div>
                 </div>
 
@@ -833,135 +825,7 @@ export default function AccountSettings({
             </div>
           )}
 
-          {/* 2. SYNC & DATABASE TAB */}
-          {activeTab === "sync" && (
-            <div className="bg-card-app border border-hairline-soft-app p-6 rounded-[24px] space-y-6 animate-fade-in">
-              
-              {/* Cloud sync backup block */}
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-bold text-muted-soft-app uppercase tracking-widest font-mono">
-                  Cloud Synchronization
-                </h3>
-                
-                <div className="flex flex-col sm:flex-row items-center justify-between p-4.5 bg-card-strong-app/30 rounded-2xl border border-hairline-soft-app gap-4">
-                  <div className="space-y-1.5 text-center sm:text-left flex-1">
-                    <div className="text-xs font-bold text-ink-app">
-                      {user ? "Cloud Synchronization" : "Local-Only Offline Mode"}
-                    </div>
-                    <p className="text-[11px] text-muted-app leading-relaxed font-medium">
-                      {user 
-                        ? `Your syllabus checkpoints, custom reminders, and keep notes are automatically backup saved to Turso cloud database.` 
-                        : "Connect securely to preserve and sync your syllabus habits across multiple systems."}
-                    </p>
-                    {user && (
-                      <div className="pt-1 flex items-center gap-1.5 justify-center sm:justify-start">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider font-mono">
-                          Synchronized • Active Backup ({lastSyncTime})
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {user ? (
-                    <button
-                      onClick={runCloudBackup}
-                      disabled={isBackupRunning}
-                      className="px-5 py-2.5 bg-primary-app hover:bg-primary-hover-app text-white font-bold text-xs rounded-xl shadow-md cursor-pointer disabled:opacity-50 transition-all flex items-center gap-2 shrink-0"
-                    >
-                      <CloudLightning className={`w-4 h-4 ${isBackupRunning ? "animate-spin" : ""}`} />
-                      {isBackupRunning ? "Syncing..." : "Sync Database Now"}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={onLogin}
-                      className="px-5 py-2.5 bg-primary-app hover:bg-primary-hover-app text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2 shrink-0"
-                    >
-                      <CloudLightning className="w-4 h-4" />
-                      Sign In to Sync
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Import / Export Options */}
-              <div className="space-y-4 pt-2">
-                <h3 className="text-[10px] font-bold text-muted-soft-app uppercase tracking-widest font-mono">
-                  Manual Data Backups
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  
-                  <div className="p-4.5 bg-card-strong-app/20 rounded-2xl border border-hairline-soft-app flex flex-col justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="text-xs font-bold text-ink-app">Export Checklist JSON</div>
-                      <p className="text-[10px] text-muted-app leading-relaxed">
-                        Save and download a portable backup `.json` document tracking your complete subjects checklist progress.
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleExportData}
-                      className="w-full py-2.5 border border-primary-app/20 text-primary-app hover:bg-primary-soft-app/20 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Download Backup
-                    </button>
-                  </div>
-
-                  <div className="p-4.5 bg-card-strong-app/20 rounded-2xl border border-hairline-soft-app flex flex-col justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="text-xs font-bold text-ink-app">Import Checklist JSON</div>
-                      <p className="text-[10px] text-muted-app leading-relaxed">
-                        Load an earlier backup file back into this web workspace to recover previous syllabus schedules.
-                      </p>
-                    </div>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept=".json"
-                      className="hidden"
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-2.5 border border-primary-app/20 text-primary-app hover:bg-primary-soft-app/20 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      Restore Backup
-                    </button>
-                  </div>
-
-                </div>
-              </div>
-
-              {/* Reset Data Danger Zone */}
-              <div className="space-y-4 pt-4 border-t border-hairline-soft-app">
-                <h3 className="text-[10px] font-bold text-rose-500 uppercase tracking-widest font-mono">
-                  Danger Zone
-                </h3>
-                
-                <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-rose-500/5 border border-rose-500/10 rounded-2xl gap-4">
-                  <div className="space-y-1 text-center sm:text-left">
-                    <div className="text-xs font-bold text-rose-500">Purge Complete Account Cache</div>
-                    <p className="text-[10px] text-muted-app">
-                      Permanently wipe out all custom calendars, checklists, parsed syllabus data, and profile preferences.
-                    </p>
-                  </div>
-                  <button
-                    onClick={onResetAllData}
-                    className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Reset Data Cache
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-
-          {/* 4. ABOUT TAB */}
+          {/* ABOUT TAB */}
           {activeTab === "about" && (
             <div className="bg-card-app border border-hairline-soft-app p-6 rounded-[24px] space-y-6 animate-fade-in">
               <div className="text-center py-4">
@@ -976,32 +840,65 @@ export default function AccountSettings({
                     nocus
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-ink-app tracking-tight mt-1">Syllabus Tracker & Planner</h3>
-                <p className="text-[11px] text-muted-soft-app mt-0.5 font-bold uppercase tracking-widest font-mono">Nocus Workspace Ecosystem</p>
+                <h3 className="text-base font-bold text-ink-app tracking-tight mt-1">Smart Syllabus Tracker & Student Workspace</h3>
+                <p className="text-[11px] text-muted-soft-app mt-0.5 font-bold uppercase tracking-widest font-mono">Designed for Focus & Academic Mastery</p>
               </div>
 
+              {/* App Overview Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4.5 bg-card-strong-app/25 rounded-2xl border border-hairline-soft-app">
-                  <div className="text-[9px] font-bold text-muted-soft-app uppercase tracking-widest font-mono">Version Release</div>
-                  <div className="text-sm font-black text-ink-app mt-1">v2.5.0 Stable</div>
+                  <div className="text-[9px] font-bold text-muted-soft-app uppercase tracking-widest font-mono">App Version</div>
+                  <div className="text-sm font-black text-ink-app mt-1">v2.5.0 Student Edition</div>
                 </div>
                 <div className="p-4.5 bg-card-strong-app/25 rounded-2xl border border-hairline-soft-app">
-                  <div className="text-[9px] font-bold text-muted-soft-app uppercase tracking-widest font-mono">Service Deployment</div>
-                  <div className="text-sm font-black text-emerald-500 mt-1 flex items-center gap-1.5 font-sans">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                    Cloud Secured Live
+                  <div className="text-[9px] font-bold text-muted-soft-app uppercase tracking-widest font-mono">Core Focus</div>
+                  <div className="text-sm font-black text-primary-app mt-1 flex items-center gap-1.5 font-sans">
+                    Distraction-Free Learning
                   </div>
                 </div>
               </div>
 
-              <div className="p-4.5 bg-card-strong-app/20 rounded-2xl border border-hairline-soft-app text-xs space-y-3 leading-relaxed">
-                <div className="font-bold text-ink-app">Application Capabilities</div>
-                <ul className="space-y-1.5 text-[11px] text-muted-app list-disc list-inside">
-                  <li>AI parsing of syllabus PDF files into clean checkboxes automatically.</li>
-                  <li>Syllabus timeline calculator indicating Overdue, Due Soon and Pending topics.</li>
-                  <li>Realtime dynamic streak counting spark chart representation.</li>
-                  <li>Secure backup portability using custom .json files format.</li>
-                </ul>
+              {/* What is Nocus */}
+              <div className="p-5 bg-card-strong-app/20 rounded-2xl border border-hairline-soft-app text-xs space-y-3 leading-relaxed">
+                <div className="font-bold text-sm text-ink-app">What is Nocus?</div>
+                <p className="text-[12px] text-muted-app leading-relaxed">
+                  Nocus is an all-in-one academic companion built to help students turn overwhelming syllabi into clear, daily actionable steps. By combining automated syllabus extraction, focused Pomodoro timers, document storage, and visual streak tracking, Nocus keeps your studies structured and stress-free.
+                </p>
+              </div>
+
+              {/* Key Features for Students */}
+              <div className="p-5 bg-card-strong-app/20 rounded-2xl border border-hairline-soft-app text-xs space-y-3.5 leading-relaxed">
+                <div className="font-bold text-sm text-ink-app">What You Can Do with Nocus</div>
+                <div className="grid grid-cols-1 gap-2.5 text-[11px] text-muted-app">
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base">📋</span>
+                    <div>
+                      <strong className="text-ink-app block">Instant Syllabus Checklists</strong>
+                      Upload your course PDF to automatically generate an interactive, chapter-by-chapter study checklist.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base">⏱️</span>
+                    <div>
+                      <strong className="text-ink-app block">Focus Timer & Deep Work</strong>
+                      Integrated Pomodoro timer designed to eliminate distractions and keep you in flow state.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base">📁</span>
+                    <div>
+                      <strong className="text-ink-app block">Curated Document Vault</strong>
+                      Keep your study materials, lecture slides, and notes neatly organized with built-in preview.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base">🔥</span>
+                    <div>
+                      <strong className="text-ink-app block">Streak & Momentum Tracking</strong>
+                      Visual progress charts to inspire daily consistency and ensure you never miss upcoming test deadlines.
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

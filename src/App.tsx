@@ -49,7 +49,8 @@ import {
   Palette,
   Check,
   Loader2,
-  FolderArchive
+  FolderArchive,
+  Compass
 } from "lucide-react";
 
 import { Syllabus, Unit, Topic, KeepNote, AppNotification, SyllabusUploadState, ImageUpload, PreviewSyllabusData } from "./types";
@@ -60,6 +61,7 @@ import ProgressCharts from "./components/ProgressCharts";
 import KeepNotes from "./components/KeepNotes";
 import AccountSettings from "./components/AccountSettings";
 import AuthView from "./components/AuthView";
+import LandingPage from "./components/LandingPage";
 
 // New modular view components
 import DashboardView from "./components/DashboardView";
@@ -116,7 +118,10 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
 
-  // Unified navigation view state
+  // Unauthenticated landing page view state
+  const [showLandingUnauth, setShowLandingUnauth] = useState(false);
+
+  // Unified navigation view state with localStorage persistence
   const [activeSidebarTab, setActiveSidebarTab] = useState<
     | "dashboard"
     | "checklist"
@@ -127,7 +132,36 @@ export default function App() {
     | "vault"
     | "settings"
     | "help"
-  >("dashboard");
+    | "landing"
+  >(() => {
+    try {
+      const saved = localStorage.getItem("nocus_active_sidebar_tab");
+      const validTabs = [
+        "dashboard",
+        "checklist",
+        "notes",
+        "analytics",
+        "calendar",
+        "bookmarks",
+        "vault",
+        "settings",
+        "help",
+        "landing"
+      ];
+      if (saved && validTabs.includes(saved)) {
+        return saved as any;
+      }
+    } catch {
+      // fallback
+    }
+    return "dashboard";
+  });
+
+  useEffect(() => {
+    if (activeSidebarTab) {
+      localStorage.setItem("nocus_active_sidebar_tab", activeSidebarTab);
+    }
+  }, [activeSidebarTab]);
 
   // Custom confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -2140,6 +2174,7 @@ export default function App() {
       { id: "calendar", label: "Study Calendar", icon: Calendar },
       { id: "vault", label: "PDF Library", icon: FolderArchive },
       { id: "bookmarks", label: "Bookmarks", icon: Star, badge: currentSyllabus ? (currentSyllabus.units.filter(u => u.bookmarked).length + currentSyllabus.units.flatMap(u => u.topics).filter((t: any) => t.bookmarked).length) : 0 },
+      { id: "landing", label: "App Overview", icon: Compass },
       { id: "settings", label: "Settings", icon: Settings },
     ];
 
@@ -2288,17 +2323,6 @@ export default function App() {
             })
           )}
         </div>
-
-        {/* Dynamic Sidebar Sign Out Trigger */}
-        <div className="mt-6 pt-4 border-t border-hairline-soft-app px-1.5">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-semibold text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-all cursor-pointer hover:translate-x-0.5 active:scale-98"
-          >
-            <LogOut className="w-4 h-4 text-rose-500 shrink-0" />
-            <span>{user ? "Sign Out" : "Exit Guest Mode"}</span>
-          </button>
-        </div>
       </div>
     );
   };
@@ -2368,6 +2392,21 @@ export default function App() {
   }
 
   if (!user && !guestMode) {
+    if (showLandingUnauth) {
+      return (
+        <LandingPage
+          onGetStarted={() => {
+            setGuestMode(true);
+            localStorage.setItem("meridian_guest_mode", "true");
+            localStorage.setItem("nocus_guest_mode", "true");
+            setShowLandingUnauth(false);
+          }}
+          onLogin={() => setShowLandingUnauth(false)}
+          user={user}
+        />
+      );
+    }
+
     return (
       <AuthView
         onGuestMode={() => {
@@ -2375,6 +2414,7 @@ export default function App() {
           localStorage.setItem("meridian_guest_mode", "true");
           localStorage.setItem("nocus_guest_mode", "true");
         }}
+        onShowLanding={() => setShowLandingUnauth(true)}
         primaryColor={primaryColor}
       />
     );
@@ -2385,7 +2425,13 @@ export default function App() {
       {/* 1. Desktop Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 w-60 bg-bg-app flex flex-col hidden lg:flex select-none border-r border-hairline-soft-app">
         {/* Brand Header */}
-        <div className="h-24 flex items-center gap-3 px-6 shrink-0">
+        <div 
+          onClick={() => setActiveSidebarTab("dashboard")}
+          className="h-24 flex items-center gap-3 px-6 shrink-0 cursor-pointer hover:opacity-85 transition-opacity"
+          role="button"
+          tabIndex={0}
+          title="Return to Home Dashboard"
+        >
           <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-md shadow-primary-app/20 p-0.5">
             <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
           </div>
@@ -2455,7 +2501,16 @@ export default function App() {
               className="absolute inset-y-0 left-0 w-60 bg-bg-app flex flex-col p-4 shadow-2xl"
             >
               <div className="flex items-center justify-between pb-4 border-b border-hairline-soft-app">
-                <div className="flex items-center gap-2.5">
+                <div 
+                  onClick={() => {
+                    setActiveSidebarTab("dashboard");
+                    setSidebarOpen(false);
+                  }}
+                  className="flex items-center gap-2.5 cursor-pointer hover:opacity-85 transition-opacity"
+                  role="button"
+                  tabIndex={0}
+                  title="Return to Home Dashboard"
+                >
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-sm p-0.5">
                     <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
                   </div>
@@ -3231,6 +3286,23 @@ export default function App() {
                         transition={{ duration: 0.2 }}
                       >
                         <HelpSupportView />
+                      </motion.div>
+                    );
+
+                  case "landing":
+                    return (
+                      <motion.div
+                        key="landing-view"
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -15 }}
+                        transition={{ duration: 0.2 }}
+                        className="-m-4 sm:-m-8 -mt-6 sm:-mt-8"
+                      >
+                        <LandingPage
+                          onGetStarted={() => setActiveSidebarTab("dashboard")}
+                          user={user}
+                        />
                       </motion.div>
                     );
 
