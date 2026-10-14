@@ -49,8 +49,7 @@ import {
   Palette,
   Check,
   Loader2,
-  FolderArchive,
-  Compass
+  FolderArchive
 } from "lucide-react";
 
 import { Syllabus, Unit, Topic, KeepNote, AppNotification, SyllabusUploadState, ImageUpload, PreviewSyllabusData } from "./types";
@@ -118,9 +117,6 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
 
-  // Unauthenticated landing page view state
-  const [showLandingUnauth, setShowLandingUnauth] = useState(false);
-
   // Unified navigation view state with localStorage persistence
   const [activeSidebarTab, setActiveSidebarTab] = useState<
     | "dashboard"
@@ -132,7 +128,6 @@ export default function App() {
     | "vault"
     | "settings"
     | "help"
-    | "landing"
   >(() => {
     try {
       const saved = localStorage.getItem("nocus_active_sidebar_tab");
@@ -145,8 +140,7 @@ export default function App() {
         "bookmarks",
         "vault",
         "settings",
-        "help",
-        "landing"
+        "help"
       ];
       if (saved && validTabs.includes(saved)) {
         return saved as any;
@@ -2174,7 +2168,6 @@ export default function App() {
       { id: "calendar", label: "Study Calendar", icon: Calendar },
       { id: "vault", label: "PDF Library", icon: FolderArchive },
       { id: "bookmarks", label: "Bookmarks", icon: Star, badge: currentSyllabus ? (currentSyllabus.units.filter(u => u.bookmarked).length + currentSyllabus.units.flatMap(u => u.topics).filter((t: any) => t.bookmarked).length) : 0 },
-      { id: "landing", label: "App Overview", icon: Compass },
       { id: "settings", label: "Settings", icon: Settings },
     ];
 
@@ -2392,30 +2385,13 @@ export default function App() {
   }
 
   if (!user && !guestMode) {
-    if (showLandingUnauth) {
-      return (
-        <LandingPage
-          onGetStarted={() => {
-            setGuestMode(true);
-            localStorage.setItem("meridian_guest_mode", "true");
-            localStorage.setItem("nocus_guest_mode", "true");
-            setShowLandingUnauth(false);
-          }}
-          onLogin={() => setShowLandingUnauth(false)}
-          user={user}
-        />
-      );
-    }
-
     return (
-      <AuthView
+      <LandingPage
         onGuestMode={() => {
           setGuestMode(true);
           localStorage.setItem("meridian_guest_mode", "true");
           localStorage.setItem("nocus_guest_mode", "true");
         }}
-        onShowLanding={() => setShowLandingUnauth(true)}
-        primaryColor={primaryColor}
       />
     );
   }
@@ -3286,23 +3262,6 @@ export default function App() {
                         transition={{ duration: 0.2 }}
                       >
                         <HelpSupportView />
-                      </motion.div>
-                    );
-
-                  case "landing":
-                    return (
-                      <motion.div
-                        key="landing-view"
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -15 }}
-                        transition={{ duration: 0.2 }}
-                        className="-m-4 sm:-m-8 -mt-6 sm:-mt-8"
-                      >
-                        <LandingPage
-                          onGetStarted={() => setActiveSidebarTab("dashboard")}
-                          user={user}
-                        />
                       </motion.div>
                     );
 
