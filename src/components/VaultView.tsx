@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { supabase } from "../lib/supabase";
+import { 
+  turso, 
+  loadVaultFilesFromTurso, 
+  syncVaultFileToTurso, 
+  deleteVaultFileFromTurso 
+} from "../lib/turso";
 import { 
   Upload, 
   Trash2, 
@@ -203,11 +208,12 @@ export default function VaultView({ user }: VaultViewProps) {
       localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
     } else {
       try {
-        await supabase
-          .from("vault_files")
-          .update({ folder: trimmed })
-          .eq("user_id", user.id)
-          .eq("folder", oldName);
+        if (turso) {
+          await turso.execute({
+            sql: "UPDATE vault_files SET folder = ? WHERE user_id = ? AND folder = ?",
+            args: [trimmed, user.id, oldName],
+          });
+        }
       } catch (err) {
         console.error("Error updating folder in database:", err);
       }
@@ -252,8 +258,11 @@ export default function VaultView({ user }: VaultViewProps) {
       localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
     } else {
       try {
-        if (filesInFolder.length > 0) {
-          await supabase.from("vault_files").delete().eq("user_id", user.id).eq("folder", targetName);
+        if (filesInFolder.length > 0 && turso) {
+          await turso.execute({
+            sql: "DELETE FROM vault_files WHERE user_id = ? AND folder = ?",
+            args: [user.id, targetName],
+          });
         }
       } catch (err) {
         console.error("Error deleting folder files from DB:", err);
@@ -280,10 +289,12 @@ export default function VaultView({ user }: VaultViewProps) {
       localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
     } else {
       try {
-        await supabase
-          .from("vault_files")
-          .update({ folder: targetFolderName })
-          .eq("id", file.id);
+        if (turso) {
+          await turso.execute({
+            sql: "UPDATE vault_files SET folder = ? WHERE id = ?",
+            args: [targetFolderName, file.id],
+          });
+        }
       } catch (err) {
         console.error("Error moving file in database:", err);
       }
@@ -339,7 +350,7 @@ export default function VaultView({ user }: VaultViewProps) {
       try {
         await fetch(`/api/vault/file/${encodeURIComponent(expired.fileKey)}`, { method: "DELETE" }).catch(() => {});
         if (user) {
-          await supabase.from("vault_files").delete().eq("id", expired.id);
+          await deleteVaultFileFromTurso(expired.id, user.id);
         }
       } catch (err) {
         console.error("Error auto-purging expired file:", err);
@@ -359,30 +370,7 @@ export default function VaultView({ user }: VaultViewProps) {
     setLoading(true);
     try {
       if (user) {
-        const { data, error } = await supabase
-          .from("vault_files")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-
-        const mapped: VaultFile[] = (data || []).map((row: any) => ({
-          id: row.id,
-          userId: row.user_id,
-          fileName: row.file_name,
-          fileKey: row.file_key,
-          fileSize: Number(row.file_size),
-          mimeType: row.mime_type,
-          folder: row.folder || "General",
-          tags: row.tags || [],
-          description: row.description || undefined,
-          isTrashed: row.is_trashed || false,
-          trashedAt: row.trashed_at || null,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
-        }));
-
+        const mapped = await loadVaultFilesFromTurso(user.id);
         const purged = await autoPurgeTrash(mapped);
         setFiles(purged);
       } else {
@@ -523,19 +511,10 @@ export default function VaultView({ user }: VaultViewProps) {
 
       if (user) {
         try {
-          await supabase.from("vault_files").insert({
-            user_id: user.id,
-            file_name: selectedFile.name,
-            file_key: fileKey,
-            file_size: selectedFile.size,
-            mime_type: selectedFile.type || "application/pdf",
-            folder: fileFolder,
-            tags: tagsArray,
-            description: fileDescription || null,
-            is_trashed: false,
-            trashed_at: null,
-          });
-        } catch (e) {}
+          await syncVaultFileToTurso(newFile, user.id);
+        } catch (e) {
+          console.error("Error saving file to Turso:", e);
+        }
       }
 
       const saved = localStorage.getItem("meridian_vault_files");
@@ -597,10 +576,12 @@ export default function VaultView({ user }: VaultViewProps) {
       localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
     } else {
       try {
-        await supabase
-          .from("vault_files")
-          .update({ is_trashed: true, trashed_at: now })
-          .eq("id", file.id);
+        if (turso) {
+          await turso.execute({
+            sql: "UPDATE vault_files SET is_trashed = 1, trashed_at = ? WHERE id = ?",
+            args: [now, file.id],
+          });
+        }
       } catch (err) {
         console.error("Error moving file to trash in DB:", err);
       }
@@ -620,10 +601,12 @@ export default function VaultView({ user }: VaultViewProps) {
       localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
     } else {
       try {
-        await supabase
-          .from("vault_files")
-          .update({ is_trashed: false, trashed_at: null })
-          .eq("id", file.id);
+        if (turso) {
+          await turso.execute({
+            sql: "UPDATE vault_files SET is_trashed = 0, trashed_at = NULL WHERE id = ?",
+            args: [file.id],
+          });
+        }
       } catch (err) {
         console.error("Error restoring file from trash in DB:", err);
       }
@@ -650,12 +633,7 @@ export default function VaultView({ user }: VaultViewProps) {
       }
 
       if (user) {
-        const { error: dbError } = await supabase
-          .from("vault_files")
-          .delete()
-          .eq("id", file.id);
-
-        if (dbError) throw dbError;
+        await deleteVaultFileFromTurso(file.id, user.id);
       } else {
         const saved = localStorage.getItem("meridian_vault_files");
         const list = saved ? JSON.parse(saved) : [];
@@ -688,8 +666,11 @@ export default function VaultView({ user }: VaultViewProps) {
         await fetch(`/api/vault/file/${encodeURIComponent(file.fileKey)}`, { method: "DELETE" }).catch(() => {});
       }
 
-      if (user) {
-        await supabase.from("vault_files").delete().eq("user_id", user.id).eq("is_trashed", true);
+      if (user && turso) {
+        await turso.execute({
+          sql: "DELETE FROM vault_files WHERE user_id = ? AND is_trashed = 1",
+          args: [user.id],
+        });
       } else {
         const remaining = files.filter((f) => !f.isTrashed);
         localStorage.setItem("meridian_vault_files", JSON.stringify(remaining));

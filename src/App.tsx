@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "./lib/supabase";
+import { useUser, useClerk } from "@clerk/react";
+import { 
+  turso, 
+  loadUserSyllabusesFromTurso, 
+  syncSyllabusToTurso, 
+  deleteSyllabusFromTurso, 
+  initTursoTables 
+} from "./lib/turso";
 import { AnimatePresence, motion } from "motion/react";
 import {
   BookOpen,
@@ -62,9 +69,22 @@ import HelpSupportView from "./components/HelpSupportView";
 import VaultView from "./components/VaultView";
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
+  const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
+  const clerk = useClerk();
+  const authLoading = !clerkLoaded;
   const [guestMode, setGuestMode] = useState<boolean>(() => localStorage.getItem("meridian_guest_mode") === "true");
-  const [authLoading, setAuthLoading] = useState(true);
+
+  const user = clerkUser
+    ? {
+        ...clerkUser,
+        id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress || "",
+        user_metadata: {
+          full_name: clerkUser.fullName || clerkUser.firstName || "",
+          avatar_url: clerkUser.imageUrl || "",
+        },
+      }
+    : null;
   const [syllabuses, setSyllabuses] = useState<Syllabus[]>([]);
   const [currentSyllabus, setCurrentSyllabus] = useState<Syllabus | null>(null);
   const [isAddingCourse, setIsAddingCourse] = useState(false);
@@ -850,127 +870,76 @@ export default function App() {
 
 
 
-  // Load syllabuses from Supabase
-  const loadSyllabusesFromSupabase = async (uid: string) => {
+  // Load syllabuses from Turso
+  const loadSyllabusesFromDatabase = async (uid: string) => {
     try {
       setSyncing(true);
-      const { data, error } = await supabase
-        .from("syllabuses")
-        .select("*")
-        .eq("user_id", uid)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const list: Syllabus[] = (data || []).map((row: any) => ({
-        id: row.id,
-        userId: row.user_id,
-        subjectName: row.subject_name,
-        units: row.units || [],
-        examDate: row.exam_date || undefined,
-        dailyTarget: row.daily_target || 4,
-        streak: row.streak || 0,
-        lastStudyDate: row.last_study_date || undefined,
-        keepNotes: row.keep_notes || [],
-        plannedTopicsToday: row.planned_topics_today || [],
-        createdAt: row.created_at,
-      }));
-
+      const list = await loadUserSyllabusesFromTurso(uid);
       setSyllabuses(list);
 
       const savedActiveId = localStorage.getItem("activeSyllabusId");
       const active = list.find(s => s.id === savedActiveId) || list[0] || null;
       setCurrentSyllabus(active);
 
-      // Migrate any legacy local syllabuses to user's Supabase account
+      // Migrate any legacy local syllabuses to user's Turso account
       const localLegacyListStr = localStorage.getItem("syllabuses");
 
       if (localLegacyListStr) {
-        const localList = JSON.parse(localLegacyListStr) as Syllabus[];
-        for (const item of localList) {
-          const migrated: Syllabus = { ...item, userId: uid };
-          await supabase.from("syllabuses").upsert({
-            id: migrated.id,
-            user_id: uid,
-            subject_name: migrated.subjectName,
-            units: migrated.units,
-            exam_date: migrated.examDate || null,
-            daily_target: migrated.dailyTarget,
-            streak: migrated.streak,
-            last_study_date: migrated.lastStudyDate || null,
-            keep_notes: migrated.keepNotes || [],
-            planned_topics_today: migrated.plannedTopicsToday || [],
-            created_at: migrated.createdAt,
-          });
-          if (!list.some(s => s.id === item.id)) {
-            list.push(migrated);
+        try {
+          const localList = JSON.parse(localLegacyListStr) as Syllabus[];
+          for (const item of localList) {
+            const migrated: Syllabus = { ...item, userId: uid };
+            await syncSyllabusToTurso(migrated, uid);
+            if (!list.some(s => s.id === item.id)) {
+              list.push(migrated);
+            }
           }
+          list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setSyllabuses([...list]);
+          const activeAfterMigration = list.find(s => s.id === savedActiveId) || list[0] || null;
+          setCurrentSyllabus(activeAfterMigration);
+          localStorage.removeItem("syllabuses");
+        } catch (e) {
+          console.error("Migration error:", e);
         }
-        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setSyllabuses([...list]);
-        const activeAfterMigration = list.find(s => s.id === savedActiveId) || list[0] || null;
-        setCurrentSyllabus(activeAfterMigration);
-        localStorage.removeItem("syllabuses");
       }
     } catch (err) {
-      console.error("Error loading syllabuses from Supabase:", err);
+      console.error("Error loading syllabuses from Turso:", err);
     } finally {
       setSyncing(false);
     }
   };
 
-  // Monitor Authentication state via Supabase
+  // Monitor Authentication state and load appropriate syllabuses
   useEffect(() => {
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user || null;
-      setUser(currentUser);
-      if (currentUser) {
-        loadSyllabusesFromSupabase(currentUser.id);
-      } else {
-        const localListStr = localStorage.getItem("syllabuses");
-        const legacySingleStr = localStorage.getItem("syllabus");
+    if (!clerkLoaded) return;
 
-        let list: Syllabus[] = [];
-        if (localListStr) {
+    if (user?.id) {
+      loadSyllabusesFromDatabase(user.id);
+    } else {
+      const localListStr = localStorage.getItem("syllabuses");
+      const legacySingleStr = localStorage.getItem("syllabus");
+
+      let list: Syllabus[] = [];
+      if (localListStr) {
+        try {
           list = JSON.parse(localListStr);
-        } else if (legacySingleStr) {
+        } catch {}
+      } else if (legacySingleStr) {
+        try {
           const single = JSON.parse(legacySingleStr);
           list = [single];
           localStorage.setItem("syllabuses", JSON.stringify(list));
           localStorage.removeItem("syllabus");
-        }
-
-        setSyllabuses(list);
-        const savedActiveId = localStorage.getItem("activeSyllabusId");
-        const active = list.find(s => s.id === savedActiveId) || list[0] || null;
-        setCurrentSyllabus(active);
+        } catch {}
       }
-      setAuthLoading(false);
-    });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user || null;
-      setUser(currentUser);
-      if (currentUser) {
-        await loadSyllabusesFromSupabase(currentUser.id);
-      } else {
-        const localListStr = localStorage.getItem("syllabuses");
-        let list: Syllabus[] = [];
-        if (localListStr) {
-          list = JSON.parse(localListStr);
-        }
-        setSyllabuses(list);
-        const savedActiveId = localStorage.getItem("activeSyllabusId");
-        const active = list.find(s => s.id === savedActiveId) || list[0] || null;
-        setCurrentSyllabus(active);
-      }
-      setAuthLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+      setSyllabuses(list);
+      const savedActiveId = localStorage.getItem("activeSyllabusId");
+      const active = list.find(s => s.id === savedActiveId) || list[0] || null;
+      setCurrentSyllabus(active);
+    }
+  }, [clerkLoaded, user?.id]);
 
   // Calculate day difference for targetDate
   const getDaysDifference = (targetDateStr: string): number => {
@@ -1035,24 +1004,12 @@ export default function App() {
     localStorage.setItem("lastReminderCheckDate", todayStr);
   }, [currentSyllabus?.id]);
 
-  // Generic Save syllabus helper (Local Storage or Supabase)
+  // Generic Save syllabus helper (Local Storage or Turso)
   const saveSyllabus = async (syllabus: Syllabus) => {
     try {
       setSyncing(true);
       if (user) {
-        await supabase.from("syllabuses").upsert({
-          id: syllabus.id,
-          user_id: user.id,
-          subject_name: syllabus.subjectName,
-          units: syllabus.units,
-          exam_date: syllabus.examDate || null,
-          daily_target: syllabus.dailyTarget,
-          streak: syllabus.streak,
-          last_study_date: syllabus.lastStudyDate || null,
-          keep_notes: syllabus.keepNotes || [],
-          planned_topics_today: syllabus.plannedTopicsToday || [],
-          created_at: syllabus.createdAt,
-        });
+        await syncSyllabusToTurso(syllabus, user.id);
       }
 
       setSyllabuses(prev => {
@@ -1070,25 +1027,13 @@ export default function App() {
     }
   };
 
-  // Trigger backup of all syllabuses to Supabase
+  // Trigger backup of all syllabuses to Turso
   const handleTriggerCloudBackup = async () => {
     if (!user) return;
     try {
       setSyncing(true);
       for (const syllabus of syllabuses) {
-        await supabase.from("syllabuses").upsert({
-          id: syllabus.id,
-          user_id: user.id,
-          subject_name: syllabus.subjectName,
-          units: syllabus.units,
-          exam_date: syllabus.examDate || null,
-          daily_target: syllabus.dailyTarget,
-          streak: syllabus.streak,
-          last_study_date: syllabus.lastStudyDate || null,
-          keep_notes: syllabus.keepNotes || [],
-          planned_topics_today: syllabus.plannedTopicsToday || [],
-          created_at: syllabus.createdAt,
-        });
+        await syncSyllabusToTurso(syllabus, user.id);
       }
     } catch (err) {
       console.error("Cloud backup error:", err);
@@ -1533,8 +1478,7 @@ export default function App() {
   // Logout
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      setUser(null);
+      await clerk.signOut();
       setGuestMode(false);
       localStorage.removeItem("meridian_guest_mode");
       setSyllabuses([]);
@@ -1624,19 +1568,7 @@ export default function App() {
 
           if (user) {
             for (const s of resetSyllabuses) {
-              await supabase.from("syllabuses").upsert({
-                id: s.id,
-                user_id: user.id,
-                subject_name: s.subjectName,
-                units: s.units,
-                exam_date: s.examDate || null,
-                daily_target: s.dailyTarget,
-                streak: s.streak,
-                last_study_date: s.lastStudyDate || null,
-                keep_notes: s.keepNotes || [],
-                planned_topics_today: s.plannedTopicsToday || [],
-                created_at: s.createdAt,
-              });
+              await syncSyllabusToTurso(s, user.id);
             }
           }
 
@@ -1675,7 +1607,7 @@ export default function App() {
         try {
           setSyncing(true);
           if (user) {
-            await supabase.from("syllabuses").delete().eq("id", id);
+            await deleteSyllabusFromTurso(id, user.id);
           }
 
           const updatedList = syllabuses.filter(s => s.id !== id);
@@ -1716,9 +1648,9 @@ export default function App() {
         try {
           setSyncing(true);
           if (user) {
-            // Delete all from Supabase
+            // Delete all from Turso
             for (const s of syllabuses) {
-              await supabase.from("syllabuses").delete().eq("id", s.id);
+              await deleteSyllabusFromTurso(s.id, user.id);
             }
           }
           // Clear states
@@ -1747,22 +1679,10 @@ export default function App() {
         userId: user ? user.id : "guest"
       }));
 
-      // Update Supabase if logged in
+      // Update Turso if logged in
       if (user) {
         for (const s of linked) {
-          await supabase.from("syllabuses").upsert({
-            id: s.id,
-            user_id: user.id,
-            subject_name: s.subjectName,
-            units: s.units,
-            exam_date: s.examDate || null,
-            daily_target: s.dailyTarget,
-            streak: s.streak,
-            last_study_date: s.lastStudyDate || null,
-            keep_notes: s.keepNotes || [],
-            planned_topics_today: s.plannedTopicsToday || [],
-            created_at: s.createdAt,
-          });
+          await syncSyllabusToTurso(s, user.id);
         }
       }
 

@@ -850,7 +850,7 @@ export default function AccountSettings({
                     </div>
                     <p className="text-[11px] text-muted-app leading-relaxed font-medium">
                       {user 
-                        ? `Your syllabus checkpoints, custom reminders, and keep notes are automatically backup saved to Supabase cloud.` 
+                        ? `Your syllabus checkpoints, custom reminders, and keep notes are automatically backup saved to Turso cloud database.` 
                         : "Connect securely to preserve and sync your syllabus habits across multiple systems."}
                     </p>
                     {user && (

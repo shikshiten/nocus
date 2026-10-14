@@ -9,7 +9,7 @@ export default function HelpSupportView() {
     },
     {
       q: "How is my data stored?",
-      a: "By default, your subjects, custom notes, and completed tracking parameters are saved in your browser's Local Storage (Guest Mode). To sync your data to our secure Supabase cloud so you can access it on any device, click the sign-in button in the upper right!"
+      a: "By default, your subjects, custom notes, and completed tracking parameters are saved in your browser's Local Storage (Guest Mode). To sync your data to our secure Turso cloud database so you can access it on any device, click the sign-in button in the upper right!"
     },
     {
       q: "How does the PDF Vault work?",
