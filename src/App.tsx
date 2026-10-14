@@ -71,8 +71,20 @@ import VaultView from "./components/VaultView";
 export default function App() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const clerk = useClerk();
-  const authLoading = !clerkLoaded;
-  const [guestMode, setGuestMode] = useState<boolean>(() => localStorage.getItem("meridian_guest_mode") === "true");
+  const [authTimedOut, setAuthTimedOut] = useState(false);
+  const [guestMode, setGuestMode] = useState<boolean>(() => {
+    return localStorage.getItem("meridian_guest_mode") === "true" || localStorage.getItem("nocus_guest_mode") === "true";
+  });
+
+  useEffect(() => {
+    // Release loading screen after 1.2s max if Clerk is still connecting/blocked
+    const timer = setTimeout(() => {
+      setAuthTimedOut(true);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const authLoading = !clerkLoaded && !authTimedOut && !guestMode;
 
   const user = clerkUser
     ? {
@@ -2292,8 +2304,8 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-bg-app flex flex-col items-center justify-center font-sans">
-        <div className="flex flex-col items-center gap-4">
+      <div className="min-h-screen bg-bg-app flex flex-col items-center justify-center font-sans p-4">
+        <div className="flex flex-col items-center gap-4 text-center">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center p-1 shadow-2xl shadow-primary-app/20 animate-pulse">
             <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
           </div>
@@ -2305,6 +2317,16 @@ export default function App() {
             <Loader2 className="w-3.5 h-3.5 text-primary-app animate-spin" />
             <span className="text-[10px] font-bold text-muted-app uppercase tracking-widest">Loading nocus...</span>
           </div>
+          <button
+            onClick={() => {
+              setGuestMode(true);
+              localStorage.setItem("meridian_guest_mode", "true");
+              localStorage.setItem("nocus_guest_mode", "true");
+            }}
+            className="mt-2 px-4 py-2 text-xs font-semibold text-muted-app hover:text-white bg-card-app/80 border border-hairline-soft-app rounded-full cursor-pointer transition-all hover:border-primary-app select-none"
+          >
+            Continue in Guest Mode →
+          </button>
         </div>
       </div>
     );
@@ -2316,6 +2338,7 @@ export default function App() {
         onGuestMode={() => {
           setGuestMode(true);
           localStorage.setItem("meridian_guest_mode", "true");
+          localStorage.setItem("nocus_guest_mode", "true");
         }}
         primaryColor={primaryColor}
       />

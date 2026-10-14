@@ -52,6 +52,7 @@ export default function AuthView({ onGuestMode }: AuthViewProps) {
         >
           {mode === "sign-in" ? (
             <SignIn 
+              routing="hash"
               appearance={{
                 baseTheme: dark,
                 variables: {
@@ -64,6 +65,7 @@ export default function AuthView({ onGuestMode }: AuthViewProps) {
             />
           ) : (
             <SignUp 
+              routing="hash"
               appearance={{
                 baseTheme: dark,
                 variables: {
