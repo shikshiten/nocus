@@ -1,24 +1,30 @@
 {
-  "name": "Nocus — Syllabus Mentor",
-  "short_name": "Nocus",
+  "name": "nocus",
+  "short_name": "nocus",
   "description": "Smart Syllabus Tracker, Pomodoro Focus & Academic Curriculum Manager",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#080714",
-  "theme_color": "#4B3FA0",
+  "theme_color": "#4F46E5",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192.svg",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.svg",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
