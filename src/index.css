@@ -1,0 +1,278 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;850;900&family=Lora:ital,wght@0,400..600;1,400..600&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Indigo Manuscript Design System - Light Mode */
+  --background: #F6F6FA; /* canvas */
+  --surface: #FFFFFF; /* canvas-elevated */
+  --card: #EDEDF6; /* surface-card */
+  --card-strong: #E1E1F0; /* surface-card-strong */
+  --primary: #4B3FA0; /* primary */
+  --primary-hover: #372F7D; /* primary-active */
+  --primary-soft: #E4E1F5; /* primary-soft */
+  --ink: #15151F; /* ink */
+  --body: #3A3A47; /* body */
+  --body-strong: #232330; /* body-strong */
+  --muted: #71718A; /* muted */
+  --muted-soft: #9A9AB0; /* muted-soft */
+  --hairline: #E1E1EC; /* hairline */
+  --hairline-soft: #EAEAF3; /* hairline-soft */
+  --on-primary: #FFFFFF;
+  --on-dark: #F2F1F8;
+  --on-dark-soft: #9A96B5;
+  
+  --status-overdue: #C0392B;
+  --status-overdue-bg: #F6DEDA;
+  --status-due-soon: #C08A2E;
+  --status-due-soon-bg: #F4E6C9;
+  --status-upcoming: #3D6EA6;
+  --status-upcoming-bg: #DCE6F2;
+  --status-complete: #2E8B6E;
+  --status-complete-bg: #DCEFE6;
+}
+
+.dark {
+  /* Indigo Manuscript Design System - Dark Inversion (Stunning Midnight Indigo Workspace) */
+  --background: #080714; /* deepest dark blue/indigo canvas */
+  --surface: #0E0C22; /* deep indigo-slate container background */
+  --card: #13112A; /* indigo card background */
+  --card-strong: #1F1B3E; /* strong elevated card highlight background */
+  --primary: #4F46E5; /* beautiful high-contrast violet brand color */
+  --primary-hover: #4338CA;
+  --primary-soft: #1B1748;
+  --ink: #FFFFFF;
+  --body: #9693B8; /* soft purple-blue high contrast body text */
+  --body-strong: #E5E2F5;
+  --muted: #A3A1C9;
+  --muted-soft: #8481A8;
+  --hairline: #1C1938;
+  --hairline-soft: #131129;
+  --on-primary: #FFFFFF;
+  --on-dark: #F2F1F8;
+  --on-dark-soft: #9693B8;
+  
+  --status-overdue: #F87171;
+  --status-overdue-bg: #2D1418;
+  --status-due-soon: #FBBF24;
+  --status-due-soon-bg: #2B1E0A;
+  --status-upcoming: #60A5FA;
+  --status-upcoming-bg: #111B31;
+  --status-complete: #34D399;
+  --status-complete-bg: #0D281E;
+}
+
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Analog Serif", "Tiempos Headline", "Newsreader", "Lora", "Georgia", serif;
+  --font-display: "Analog Serif", "Tiempos Headline", "Newsreader", "Lora", "Georgia", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --shadow-signature: 0px 8px 24px rgba(21, 21, 31, 0.12);
+  
+  --color-bg-app: var(--background);
+  --color-surface-app: var(--surface);
+  --color-card-app: var(--card);
+  --color-card-strong-app: var(--card-strong);
+  
+  --color-primary-app: var(--primary);
+  --color-primary-active-app: var(--primary-hover);
+  --color-primary-soft-app: var(--primary-soft);
+  
+  --color-ink-app: var(--ink);
+  --color-body-app: var(--body);
+  --color-body-strong-app: var(--body-strong);
+  --color-muted-app: var(--muted);
+  --color-muted-soft-app: var(--muted-soft);
+  --color-hairline-app: var(--hairline);
+  --color-hairline-soft-app: var(--hairline-soft);
+  
+  --color-status-overdue-app: var(--status-overdue);
+  --color-status-overdue-bg-app: var(--status-overdue-bg);
+  --color-status-due-soon-app: var(--status-due-soon);
+  --color-status-due-soon-bg-app: var(--status-due-soon-bg);
+  --color-status-upcoming-app: var(--status-upcoming);
+  --color-status-upcoming-bg-app: var(--status-upcoming-bg);
+  --color-status-complete-app: var(--status-complete);
+  --color-status-complete-bg-app: var(--status-complete-bg);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--background);
+  color: var(--body);
+  position: relative;
+  min-height: 100vh;
+  letter-spacing: 0.01em;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Subtle Animated Noise Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.015; /* 1.5% opacity noise for elegant warmth */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  animation: noiseAnimation 0.5s infinite steps(10);
+}
+
+@keyframes noiseAnimation {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-1%, -1%); }
+  20% { transform: translate(1%, 2%); }
+  30% { transform: translate(-2%, -2%); }
+  40% { transform: translate(1%, 3%); }
+  50% { transform: translate(-1%, 1%); }
+  60% { transform: translate(2%, -1%); }
+  70% { transform: translate(-2%, 1%); }
+  80% { transform: translate(1%, -2%); }
+  90% { transform: translate(-1%, 3%); }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(122, 116, 104, 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(122, 116, 104, 0.4);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(247, 243, 232, 0.1);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(247, 243, 232, 0.2);
+}
+
+/* Premium Component Layouts & Transitions */
+.glass-panel {
+  background-color: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-btn {
+  border-radius: 9999px; /* Pill button styling for action elements */
+  font-weight: 600;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+.premium-btn:active {
+  transform: scale(0.96);
+}
+
+.premium-btn-primary {
+  background-color: var(--primary);
+  color: var(--on-primary);
+}
+.premium-btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.premium-btn-secondary {
+  background-color: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+}
+.premium-btn-secondary:hover {
+  background-color: var(--card);
+}
+
+.premium-input {
+  border-radius: 8px;
+  background-color: var(--surface);
+  border: 1px solid var(--hairline);
+  color: var(--body-strong);
+  transition: all 200ms ease-in-out;
+  padding: 0.6rem 0.85rem;
+}
+.premium-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+  outline: none;
+}
+
+/* Navigation items active styling */
+.nav-item-active {
+  color: var(--ink);
+  background-color: var(--card);
+  font-weight: 600;
+}
+
+/* Instant theme switch utility: disables transitions globally */
+.disable-transitions,
+.disable-transitions * {
+  -webkit-transition: none !important;
+  -moz-transition: none !important;
+  -o-transition: none !important;
+  -ms-transition: none !important;
+  transition: none !important;
+}
+
+/* Custom continuous marquee scrolling animation */
+@keyframes marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee 14s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Recharts Bar Hover Effect - Optimized for high performance, eliminating scrolling lag */
+.recharts-bar-rectangle path {
+  transition: opacity 0.15s ease-in-out;
+}
+.recharts-bar-rectangle:hover path {
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+/* Remove default focus outline/border from Recharts wrappers and SVG elements */
+.recharts-wrapper,
+.recharts-wrapper *,
+.recharts-surface,
+.recharts-surface *,
+.recharts-responsive-container,
+.recharts-responsive-container * {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* GPU acceleration for lag-free scrolling over rich chart visuals */
+.chart-container-gpu {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+.recharts-wrapper {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  will-change: transform;
+}

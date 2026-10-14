@@ -1,0 +1,6 @@
+{
+  "name": "Syllabus Tracker",
+  "description": "Indigo Manuscript — A cool, ink-on-paper productivity workspace and syllabus tracker, featuring beautiful serif display typography and spatial discipline.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

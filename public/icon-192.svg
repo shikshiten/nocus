@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#1B1748" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <!-- Book Spine / Manuscript symbol -->
+  <path d="M128 140 C128 140 180 120 256 150 C332 120 384 140 384 140 L384 372 C384 372 332 352 256 382 C180 352 128 372 128 372 Z" fill="#FFFFFF" fill-opacity="0.95" />
+  <line x1="256" y1="150" x2="256" y2="382" stroke="#4F46E5" stroke-width="8" stroke-linecap="round" />
+  <!-- Academic Quill / Star Accent -->
+  <circle cx="256" cy="100" r="18" fill="url(#goldGrad)" />
+  <path d="M256 60 L262 90 L292 96 L262 102 L256 132 L250 102 L220 96 L250 90 Z" fill="url(#goldGrad)" />
+</svg>
