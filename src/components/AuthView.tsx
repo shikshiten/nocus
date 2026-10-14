@@ -43,6 +43,32 @@ export default function AuthView({ onGuestMode }: AuthViewProps) {
           </div>
         </div>
 
+        {/* Mode Switcher Tabs */}
+        <div className="flex items-center p-1 bg-white/5 border border-white/10 rounded-2xl mb-5 w-full max-w-xs shadow-inner">
+          <button
+            type="button"
+            onClick={() => setMode("sign-in")}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer select-none text-center ${
+              mode === "sign-in"
+                ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("sign-up")}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer select-none text-center ${
+              mode === "sign-up"
+                ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Create Account
+          </button>
+        </div>
+
         {/* Clerk Sign In / Sign Up component */}
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
@@ -106,6 +132,33 @@ export default function AuthView({ onGuestMode }: AuthViewProps) {
             />
           )}
         </motion.div>
+
+        {/* Toggle Mode Link */}
+        <div className="text-center mt-4 text-xs text-slate-400">
+          {mode === "sign-in" ? (
+            <p>
+              Don't have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setMode("sign-up")}
+                className="font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer ml-1"
+              >
+                Create Account (Sign Up)
+              </button>
+            </p>
+          ) : (
+            <p>
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setMode("sign-in")}
+                className="font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer ml-1"
+              >
+                Sign In
+              </button>
+            </p>
+          )}
+        </div>
 
         {/* Guest Mode Button */}
         <motion.div 

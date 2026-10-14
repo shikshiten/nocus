@@ -2319,16 +2319,6 @@ export default function App() {
             <Loader2 className="w-3.5 h-3.5 text-primary-app animate-spin" />
             <span className="text-[10px] font-bold text-muted-app uppercase tracking-widest">Loading nocus...</span>
           </div>
-          <button
-            onClick={() => {
-              setGuestMode(true);
-              localStorage.setItem("meridian_guest_mode", "true");
-              localStorage.setItem("nocus_guest_mode", "true");
-            }}
-            className="mt-2 px-4 py-2 text-xs font-semibold text-muted-app hover:text-white bg-card-app/80 border border-hairline-soft-app rounded-full cursor-pointer transition-all hover:border-primary-app select-none"
-          >
-            Continue in Guest Mode →
-          </button>
         </div>
       </div>
     );
