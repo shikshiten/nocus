@@ -303,7 +303,7 @@ Return ONLY a JSON object with this exact structure:
 
         const fileKey = `vault/${folder || "General"}/${Date.now()}_${fileName}`;
         const command = new PutObjectCommand({
-          Bucket: env.R2_BUCKET_NAME || "nexora-vault",
+          Bucket: env.R2_BUCKET_NAME || "nocus",
           Key: fileKey,
           ContentType: mimeType || "application/pdf",
         });
@@ -330,7 +330,7 @@ Return ONLY a JSON object with this exact structure:
         });
 
         const command = new GetObjectCommand({
-          Bucket: env.R2_BUCKET_NAME || "nexora-vault",
+          Bucket: env.R2_BUCKET_NAME || "nocus",
           Key: fileKey,
           ResponseContentDisposition: "inline",
         });

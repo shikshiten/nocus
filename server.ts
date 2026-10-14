@@ -791,7 +791,7 @@ Example format:
     },
   }) : null;
 
-  const R2_BUCKET = process.env.R2_BUCKET_NAME || "";
+  const R2_BUCKET = process.env.R2_BUCKET_NAME || "nocus";
 
   // Generate presigned upload URL
   app.post("/api/vault/upload-url", async (req, res) => {
