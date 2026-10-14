@@ -1485,6 +1485,7 @@ export default function App() {
   const handleLogin = async () => {
     setGuestMode(false);
     localStorage.removeItem("meridian_guest_mode");
+    localStorage.removeItem("nocus_guest_mode");
   };
 
   // Logout
@@ -1493,6 +1494,7 @@ export default function App() {
       await clerk.signOut();
       setGuestMode(false);
       localStorage.removeItem("meridian_guest_mode");
+      localStorage.removeItem("nocus_guest_mode");
       setSyllabuses([]);
       setCurrentSyllabus(null);
       localStorage.removeItem("activeSyllabusId");
@@ -2831,7 +2833,7 @@ export default function App() {
             </div>
 
             {/* Profile Caps / Actions */}
-            <div className="hidden sm:flex items-center gap-2.5 pl-2 border-l border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
               {authLoading ? (
                 <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 animate-pulse" />
               ) : user ? (
@@ -2856,15 +2858,15 @@ export default function App() {
                       <Camera className="w-3 h-3 text-white" />
                     </div>
                   </button>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-350">{user.user_metadata?.full_name || "Learner"}</span>
+                  <span className="hidden sm:inline text-xs font-bold text-slate-700 dark:text-slate-350">{user.user_metadata?.full_name || "Learner"}</span>
                 </div>
               ) : (
                 <button
                   onClick={handleLogin}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[var(--accent)] text-white hover:brightness-110 font-extrabold text-xs cursor-pointer shadow-md shadow-[var(--accent-glow)] hover:scale-105 active:scale-95 transition-all border-0"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--accent)] text-white hover:brightness-110 font-bold text-xs cursor-pointer shadow-md shadow-[var(--accent-glow)] hover:scale-105 active:scale-95 transition-all border-0"
                 >
                   <LogIn className="w-3.5 h-3.5 text-white" />
-                  <span>Sync</span>
+                  <span>Sign In</span>
                 </button>
               )}
             </div>
