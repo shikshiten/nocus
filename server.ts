@@ -3,11 +3,23 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import OpenAI from "openai";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+// Lazy initialization of the OpenAI client
+let openaiClient: OpenAI | null = null;
+function getOpenAIClient(): OpenAI | null {
+  const key = (process.env.OPENAI_API_KEY || "").trim();
+  if (!key) return null;
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: key });
+  }
+  return openaiClient;
+}
 
 // Lazy initialization of the Gemini SDK client
 let aiClient: GoogleGenAI | null = null;
@@ -15,7 +27,7 @@ function getAIClient(): GoogleGenAI {
   if (!aiClient) {
     const key = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").trim();
     if (!key) {
-      throw new Error("GEMINI_API_KEY environment variable is missing. Please set it in secrets or env.");
+      throw new Error("Neither GEMINI_API_KEY nor OPENAI_API_KEY could fulfill this request. Please configure an AI key.");
     }
     // Initialize standard GoogleGenAI client with API key auth
     aiClient = new GoogleGenAI({
@@ -233,6 +245,53 @@ async function startServer() {
         return res.status(400).json({ error: "Syllabus content is required (pdfBase64 or syllabusText)." });
       }
 
+      const openai = getOpenAIClient();
+
+      // If text syllabus and OpenAI is available, prioritize GPT-4o-mini
+      if (openai && syllabusText) {
+        try {
+          console.log("Parsing syllabus using OpenAI GPT-4o-mini...");
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            response_format: { type: "json_object" },
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert academic curriculum assistant. Parse the provided syllabus document completely and extract ALL Units, Modules, Chapters, and Topics into a highly structured JSON format.
+Analyze the ENTIRE document thoroughly across all sections. Do NOT stop after the first unit or skip any sections.
+Extract every single Unit/Module/Chapter (e.g. Unit 1, Unit 2, Unit 3, Unit 4, Unit 5, etc.) and all corresponding sub-topics under each unit.
+Group the topics logically under their respective Units.
+Keep the unit names descriptive (e.g. "Unit 1: Digital Fundamentals"), and keep each topic short, clear, and action-oriented (maximum 10 words per topic).
+
+Return ONLY a JSON object with this exact typescript structure:
+{
+  "subjectName": "string",
+  "units": [
+    {
+      "name": "string",
+      "topics": ["string"]
+    }
+  ]
+}`
+              },
+              {
+                role: "user",
+                content: `Here is the syllabus text to parse:\n\n${syllabusText}`
+              }
+            ],
+            temperature: 0.2
+          });
+
+          const raw = completion.choices[0]?.message?.content || "{}";
+          const parsed = cleanAndParseJSON(raw);
+          if (parsed && parsed.subjectName && Array.isArray(parsed.units)) {
+            return res.json(parsed);
+          }
+        } catch (openaiErr) {
+          console.warn("OpenAI syllabus parse failed, falling back to Gemini:", openaiErr);
+        }
+      }
+
       const ai = getAIClient();
       let contents: any[] = [];
 
@@ -336,6 +395,73 @@ Ensure the response contains no markdown block characters (like \`\`\`json) and 
 
       if (!images || !Array.isArray(images) || images.length === 0) {
         return res.status(400).json({ error: "Syllabus images are required." });
+      }
+
+      const openai = getOpenAIClient();
+      if (openai) {
+        try {
+          console.log("Scanning syllabus images using OpenAI GPT-4o-mini Vision...");
+          const imageContents: any[] = images.map((img: any) => {
+            const cleanBase64 = img.base64.replace(/^data:[^;]+;base64,/, "");
+            const mime = img.mimeType || "image/jpeg";
+            return {
+              type: "image_url",
+              image_url: {
+                url: `data:${mime};base64,${cleanBase64}`
+              }
+            };
+          });
+
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            response_format: { type: "json_object" },
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert academic curriculum and OCR assistant.
+Analyze the provided syllabus image(s) (which may be printed or handwritten in English, Hindi, or mixed Hinglish) and extract the curriculum.
+
+Follow these strict cleanup and parsing guidelines:
+1. Clean the text by removing unnecessary headers, footers, page numbers, institutional logos, watermarks, stamps, and extra spaces.
+2. Intelligently identify: Subject Name, Units/Chapters, and Topics inside each unit (under 10 words per topic).
+3. Assess image quality: if any parts are blurry, handwritten or uncertain, set "isLowConfidence": true with a brief "confidenceReason". Otherwise "isLowConfidence": false.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "subjectName": "string",
+  "units": [
+    {
+      "name": "string",
+      "topics": [
+        {
+          "name": "string",
+          "isLowConfidence": false,
+          "confidenceReason": "string"
+        }
+      ]
+    }
+  ]
+}`
+              },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: "Parse and structure the syllabus from these image(s):" },
+                  ...imageContents
+                ]
+              }
+            ],
+            temperature: 0.2
+          });
+
+          const raw = completion.choices[0]?.message?.content || "{}";
+          const parsed = cleanAndParseJSON(raw);
+          if (parsed && parsed.subjectName && Array.isArray(parsed.units)) {
+            return res.json(parsed);
+          }
+        } catch (openaiErr) {
+          console.warn("OpenAI scan-syllabus failed, attempting Gemini fallback:", openaiErr);
+        }
       }
 
       const ai = getAIClient();
@@ -458,13 +584,49 @@ Ensure the response contains no markdown formatting characters (like \`\`\`json)
     }
   });
 
-  // API Route: Generate Custom SVG Avatar via Gemini
+  // API Route: Generate Custom SVG Avatar via OpenAI or Gemini
   app.post("/api/generate-avatar", async (req, res) => {
     try {
       const { prompt } = req.body;
 
       if (!prompt) {
         return res.status(400).json({ error: "Prompt is required." });
+      }
+
+      const openai = getOpenAIClient();
+      if (openai) {
+        try {
+          console.log("Generating avatar using OpenAI GPT-4o-mini...");
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert graphic designer and SVG illustrator.
+Your task is to generate a beautiful, creative, modern, and clean vector avatar SVG based on the user's prompt.
+Follow these strict design guidelines:
+1. Output ONLY a valid, self-contained SVG string starting with "<svg" and ending with "</svg>". Do NOT wrap it in any markdown blocks (like \`\`\`xml or \`\`\`html) or any other conversational text.
+2. The SVG MUST have a viewBox="0 0 100 100", width="100%", height="100%", and look premium and professional.
+3. Use modern design elements like soft gradients, clean geometric shapes, beautiful colors, and high contrast.
+4. Ensure the SVG is well-formed, valid, and uses standard tags like <rect>, <circle>, <path>, <defs>, <linearGradient>, etc.`
+              },
+              {
+                role: "user",
+                content: `Create an avatar SVG for: "${prompt}"`
+              }
+            ],
+            temperature: 0.7
+          });
+
+          let svgText = completion.choices[0]?.message?.content || "";
+          svgText = svgText.trim().replace(/^```(?:xml|html|svg)?\n?/, "").replace(/\n?```$/, "").trim();
+          const match = svgText.match(/<svg[\s\S]*<\/svg>/);
+          if (match) {
+            return res.json({ svg: match[0] });
+          }
+        } catch (openaiErr) {
+          console.warn("OpenAI avatar gen failed, falling back to Gemini:", openaiErr);
+        }
       }
 
       const ai = getAIClient();
@@ -514,10 +676,43 @@ Follow these strict design guidelines:
     }
   });
 
-  // API Route: Generate Custom Motivational Quote via Gemini
+  // API Route: Generate Custom Motivational Quote via OpenAI or Gemini
   app.post("/api/generate-quote", async (req, res) => {
     try {
       const { timeOfDay } = req.body;
+
+      const openai = getOpenAIClient();
+      if (openai) {
+        try {
+          console.log("Generating quote using OpenAI GPT-4o-mini...");
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            response_format: { type: "json_object" },
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert motivational coach, academic advisor, and inspiring writer.
+Generate a highly inspiring, fresh study quote tailored for the time of day: "${timeOfDay || "morning"}".
+Output ONLY a JSON object with exactly two keys: "quote" (under 130 characters) and "author".`
+              },
+              {
+                role: "user",
+                content: `Provide an inspiring motivational study quote for ${timeOfDay || "morning"}`
+              }
+            ],
+            temperature: 0.8
+          });
+
+          const raw = completion.choices[0]?.message?.content || "{}";
+          const data = JSON.parse(raw);
+          if (data.quote && data.author) {
+            return res.json(data);
+          }
+        } catch (openaiErr) {
+          console.warn("OpenAI quote gen failed, falling back to Gemini:", openaiErr);
+        }
+      }
+
       const ai = getAIClient();
 
       const systemPrompt = `You are an expert motivational coach, academic advisor, and inspiring writer.
