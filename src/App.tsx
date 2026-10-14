@@ -603,6 +603,30 @@ export default function App() {
     localStorage.setItem("customAvatar", avatar);
   };
 
+  // Theme Style state ("default" vs "terracotta" [#D5360C bg, #101010 element, #E6D5BD text])
+  const [themeStyle, setThemeStyle] = useState<"default" | "terracotta">(() => {
+    return (localStorage.getItem("themeStyle") as "default" | "terracotta") || "default";
+  });
+
+  useEffect(() => {
+    if (themeStyle === "terracotta") {
+      document.documentElement.setAttribute("data-theme", "terracotta");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    localStorage.setItem("themeStyle", themeStyle);
+  }, [themeStyle]);
+
+  const handleUpdateThemeStyle = (style: "default" | "terracotta") => {
+    setThemeStyle(style);
+    if (style === "terracotta") {
+      document.documentElement.setAttribute("data-theme", "terracotta");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    localStorage.setItem("themeStyle", style);
+  };
+
   const [avatarTab, setAvatarTab] = useState<"upload" | "ai" | "abstract">("upload");
   const [avatarPrompt, setAvatarPrompt] = useState("");
   const [generatingAvatar, setGeneratingAvatar] = useState(false);
@@ -781,14 +805,16 @@ export default function App() {
           text: "text-primary-app",
           border: "border-hairline-app",
           borderPrimary: "border-primary-app",
-          gradient: "from-primary-app to-[#6366F1] dark:to-[#818CF8]",
+          gradient: themeStyle === "terracotta"
+            ? "from-[#D5360C] to-[#E6D5BD]"
+            : "from-primary-app to-[#6366F1] dark:to-[#818CF8]",
           gradientBg: "bg-card-app/40 dark:bg-[#2C2924]/20",
           badge: "bg-primary-soft-app/40 text-primary-active-app dark:bg-primary-soft-app/10 dark:text-primary-app",
           ring: "ring-primary-app/20",
           shadow: "shadow-primary-app/15",
           accentBg: "bg-primary-app text-white shadow-xs shadow-primary-app/10",
           textMuted: "text-muted-app",
-          hex: "#4B3FA0",
+          hex: themeStyle === "terracotta" ? "#D5360C" : "#4B3FA0",
         };
     }
   };
@@ -3162,6 +3188,8 @@ export default function App() {
                           customAvatar={customAvatar}
                           onUpdateCustomAvatar={handleUpdateCustomAvatar}
                           onTriggerCloudBackup={handleTriggerCloudBackup}
+                          themeStyle={themeStyle}
+                          onUpdateThemeStyle={handleUpdateThemeStyle}
                         />
                       </motion.div>
                     );

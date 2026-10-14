@@ -29,7 +29,8 @@ import {
   HelpCircle,
   X,
   CreditCard,
-  LogOut
+  LogOut,
+  Palette
 } from "lucide-react";
 import { Syllabus } from "../types";
 
@@ -52,6 +53,8 @@ interface AccountSettingsProps {
   customAvatar: string;
   onUpdateCustomAvatar: (avatar: string) => void;
   onTriggerCloudBackup?: () => Promise<void>;
+  themeStyle?: "default" | "terracotta";
+  onUpdateThemeStyle?: (style: "default" | "terracotta") => void;
 }
 
 export default function AccountSettings({
@@ -72,7 +75,9 @@ export default function AccountSettings({
   onToggleDarkMode,
   customAvatar,
   onUpdateCustomAvatar,
-  onTriggerCloudBackup
+  onTriggerCloudBackup,
+  themeStyle = "default",
+  onUpdateThemeStyle
 }: AccountSettingsProps) {
   // Navigation active tab (General, Sync, About)
   const [activeTab, setActiveTab] = useState<"general" | "sync" | "about" | "notifications" | "privacy">("general");
@@ -578,6 +583,113 @@ export default function AccountSettings({
                 </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Theme Palette & Color Style Selector */}
+                  <div className="md:col-span-2 p-4 sm:p-5 bg-card-app border border-hairline-soft-app rounded-2xl space-y-3.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-orange-500/10 dark:bg-orange-500/20 text-[#D5360C] flex items-center justify-center shrink-0">
+                          <Palette className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold text-ink-app">Theme & Color Style</h4>
+                            <span className="text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-[#D5360C]/15 text-[#D5360C]">
+                              Custom Styles
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-muted-app mt-0.5">Choose your workspace aesthetic & color palette</p>
+                        </div>
+                      </div>
+                      <div className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-primary-soft-app/25 text-ink-app font-bold self-start sm:self-auto border border-hairline-soft-app">
+                        Active: {themeStyle === "terracotta" ? "Terracotta Noir" : "Indigo Manuscript"}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {/* Default Theme Option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateThemeStyle?.("default");
+                          triggerSuccess("Theme set to Default (Indigo Manuscript)");
+                        }}
+                        className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between gap-3 ${
+                          themeStyle === "default"
+                            ? "border-primary-app ring-2 ring-primary-app/20 bg-card-strong-app/50 shadow-sm"
+                            : "border-hairline-soft-app hover:border-hairline-app bg-card-app hover:bg-card-strong-app/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-ink-app">Indigo Manuscript</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-500 font-bold">Default</span>
+                          </div>
+                          {themeStyle === "default" ? (
+                            <div className="w-4.5 h-4.5 rounded-full bg-primary-app text-white flex items-center justify-center text-[10px] shadow-xs">
+                              <Check className="w-3 h-3" />
+                            </div>
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border border-hairline-app" />
+                          )}
+                        </div>
+
+                        <p className="text-[10px] text-muted-app leading-relaxed">
+                          Classic paper canvas with refined indigo violet typography & academic layout.
+                        </p>
+
+                        <div className="flex items-center justify-between pt-1 border-t border-hairline-soft-app">
+                          <div className="flex items-center gap-1.5 text-[9px] text-muted-soft-app font-mono">
+                            <span className="w-3.5 h-3.5 rounded-full bg-[#F6F6FA] dark:bg-[#080714] border border-hairline-app inline-block" title="Background: #F6F6FA" />
+                            <span className="w-3.5 h-3.5 rounded-full bg-[#FFFFFF] dark:bg-[#0E0C22] border border-hairline-app inline-block" title="Surface: #FFFFFF" />
+                            <span className="w-3.5 h-3.5 rounded-full bg-[#4B3FA0] inline-block" title="Primary: #4B3FA0" />
+                          </div>
+                          <span className="text-[9px] font-mono text-muted-app">Original</span>
+                        </div>
+                      </button>
+
+                      {/* Terracotta Noir Custom Theme Option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateThemeStyle?.("terracotta");
+                          triggerSuccess("Theme set to Terracotta Noir (#D5360C)!");
+                        }}
+                        className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between gap-3 ${
+                          themeStyle === "terracotta"
+                            ? "border-[#D5360C] ring-2 ring-[#D5360C]/40 bg-[#101010] shadow-md text-[#E6D5BD]"
+                            : "border-hairline-soft-app hover:border-hairline-app bg-card-app hover:bg-card-strong-app/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-ink-app">Terracotta Noir</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#D5360C]/25 text-[#D5360C] font-bold">New Style</span>
+                          </div>
+                          {themeStyle === "terracotta" ? (
+                            <div className="w-4.5 h-4.5 rounded-full bg-[#D5360C] text-[#E6D5BD] flex items-center justify-center text-[10px] shadow-xs">
+                              <Check className="w-3 h-3" />
+                            </div>
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border border-hairline-app" />
+                          )}
+                        </div>
+
+                        <p className="text-[10px] text-muted-app leading-relaxed">
+                          Terracotta background canvas with deep onyx elements & parchment text.
+                        </p>
+
+                        <div className="flex items-center justify-between pt-1 border-t border-hairline-soft-app">
+                          <div className="flex items-center gap-1.5 text-[9px] text-muted-soft-app font-mono">
+                            <span className="w-3.5 h-3.5 rounded-full bg-[#D5360C] border border-white/20 inline-block" title="Background: #D5360C" />
+                            <span className="w-3.5 h-3.5 rounded-full bg-[#101010] border border-white/20 inline-block" title="Element: #101010" />
+                            <span className="w-3.5 h-3.5 rounded-full bg-[#E6D5BD] border border-black/20 inline-block" title="Text: #E6D5BD" />
+                          </div>
+                          <span className="text-[9px] font-mono font-bold text-[#D5360C]">#D5360C</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Dark Mode Theme */}
                   <div className="p-4 bg-card-app border border-hairline-soft-app rounded-2xl flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5 min-w-0">

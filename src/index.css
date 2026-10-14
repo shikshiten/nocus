@@ -66,6 +66,41 @@
   --status-complete-bg: #0D281E;
 }
 
+/* Terracotta Noir Custom Aesthetic:
+   #D5360C for Background Canvas
+   #101010 for Elements & Surfaces
+   #E6D5BD for Text & Headings
+*/
+html[data-theme="terracotta"],
+html[data-theme="terracotta"].dark {
+  --background: #D5360C;
+  --surface: #101010;
+  --card: #101010;
+  --card-strong: #191919;
+  --primary: #D5360C;
+  --primary-hover: #B82E0A;
+  --primary-soft: rgba(213, 54, 12, 0.25);
+  --ink: #E6D5BD;
+  --body: #E6D5BD;
+  --body-strong: #FFF8EE;
+  --muted: #C5B49C;
+  --muted-soft: #A8967E;
+  --hairline: #262626;
+  --hairline-soft: #1B1B1B;
+  --on-primary: #E6D5BD;
+  --on-dark: #E6D5BD;
+  --on-dark-soft: #C5B49C;
+
+  --status-overdue: #FF6B6B;
+  --status-overdue-bg: #2B1111;
+  --status-due-soon: #FBBF24;
+  --status-due-soon-bg: #2B1E0A;
+  --status-upcoming: #60A5FA;
+  --status-upcoming-bg: #111B31;
+  --status-complete: #34D399;
+  --status-complete-bg: #0D281E;
+}
+
 @theme {
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-serif: "Analog Serif", "Tiempos Headline", "Newsreader", "Lora", "Georgia", serif;
@@ -279,3 +314,102 @@ body::before {
   backface-visibility: hidden;
   will-change: transform;
 }
+
+/* ==========================================================================
+   Terracotta Noir Specific Surfaces & Elements
+   Canvas: #D5360C | Elements/Surfaces: #101010 | Text/Headings: #E6D5BD
+   ========================================================================== */
+html[data-theme="terracotta"] body {
+  background-color: #D5360C !important;
+  color: #E6D5BD !important;
+}
+
+/* Sidebar and Header Element Styling */
+html[data-theme="terracotta"] aside {
+  background-color: #101010 !important;
+  border-color: #262626 !important;
+}
+
+html[data-theme="terracotta"] header {
+  background-color: rgba(16, 16, 16, 0.95) !important;
+  border-color: #262626 !important;
+}
+
+/* Element background containers */
+html[data-theme="terracotta"] .bg-white,
+html[data-theme="terracotta"] .bg-slate-50,
+html[data-theme="terracotta"] .bg-slate-100,
+html[data-theme="terracotta"] .bg-slate-900,
+html[data-theme="terracotta"] .dark\:bg-slate-900,
+html[data-theme="terracotta"] .dark\:bg-slate-950,
+html[data-theme="terracotta"] .dark\:bg-slate-800,
+html[data-theme="terracotta"] .dark\:bg-slate-850,
+html[data-theme="terracotta"] .dark\:bg-\[\#080714\],
+html[data-theme="terracotta"] .dark\:bg-\[\#0E0C22\],
+html[data-theme="terracotta"] .dark\:bg-\[\#13112A\],
+html[data-theme="terracotta"] .dark\:bg-\[\#1F1B3E\] {
+  background-color: #101010 !important;
+}
+
+/* Card and Surface containers */
+html[data-theme="terracotta"] .bg-card-app,
+html[data-theme="terracotta"] .bg-surface-app {
+  background-color: #101010 !important;
+}
+
+html[data-theme="terracotta"] .bg-card-strong-app {
+  background-color: #191919 !important;
+}
+
+/* Text and Headings */
+html[data-theme="terracotta"] .text-slate-900,
+html[data-theme="terracotta"] .text-slate-800,
+html[data-theme="terracotta"] .text-slate-700,
+html[data-theme="terracotta"] .text-ink-app,
+html[data-theme="terracotta"] .dark\:text-white,
+html[data-theme="terracotta"] .dark\:text-slate-200,
+html[data-theme="terracotta"] .dark\:text-slate-100,
+html[data-theme="terracotta"] h1,
+html[data-theme="terracotta"] h2,
+html[data-theme="terracotta"] h3,
+html[data-theme="terracotta"] h4,
+html[data-theme="terracotta"] h5,
+html[data-theme="terracotta"] h6 {
+  color: #E6D5BD !important;
+}
+
+html[data-theme="terracotta"] .text-slate-500,
+html[data-theme="terracotta"] .text-slate-400,
+html[data-theme="terracotta"] .dark\:text-slate-400,
+html[data-theme="terracotta"] .dark\:text-slate-500,
+html[data-theme="terracotta"] .text-muted-app,
+html[data-theme="terracotta"] .text-muted-soft-app {
+  color: #C5B49C !important;
+}
+
+/* Borders */
+html[data-theme="terracotta"] .border-slate-200,
+html[data-theme="terracotta"] .border-slate-150,
+html[data-theme="terracotta"] .border-slate-100,
+html[data-theme="terracotta"] .dark\:border-slate-800,
+html[data-theme="terracotta"] .dark\:border-slate-700,
+html[data-theme="terracotta"] .dark\:border-slate-850,
+html[data-theme="terracotta"] .border-hairline-app,
+html[data-theme="terracotta"] .border-hairline-soft-app {
+  border-color: #262626 !important;
+}
+
+/* Form controls */
+html[data-theme="terracotta"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="terracotta"] textarea,
+html[data-theme="terracotta"] select {
+  background-color: #171717 !important;
+  color: #E6D5BD !important;
+  border-color: #2C2C2C !important;
+}
+
+html[data-theme="terracotta"] input::placeholder,
+html[data-theme="terracotta"] textarea::placeholder {
+  color: #9A8A75 !important;
+}
+
