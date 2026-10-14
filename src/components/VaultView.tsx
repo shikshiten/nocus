@@ -442,6 +442,11 @@ export default function VaultView({ user }: VaultViewProps) {
         setSelectedFile(null);
         return;
       }
+      if (files.length >= MAX_VAULT_FILES) {
+        setErrorMsg(`Total vault capacity reached (${MAX_VAULT_FILES} files total, including Trash). Please empty your Trash or permanently delete files first.`);
+        setSelectedFile(null);
+        return;
+      }
       setSelectedFile(file);
       setErrorMsg(null);
     }
@@ -456,9 +461,14 @@ export default function VaultView({ user }: VaultViewProps) {
       return;
     }
 
-    const activeCount = files.filter((f) => !f.isTrashed).length;
-    if (activeCount >= MAX_VAULT_FILES) {
-      setErrorMsg(`Maximum vault limit reached (${MAX_VAULT_FILES} PDFs). You cannot upload more than ${MAX_VAULT_FILES} PDFs. Please delete an existing file first.`);
+    const totalCount = files.length; // Count ALL files (both active and in trash)
+    if (totalCount >= MAX_VAULT_FILES) {
+      const trashedCount = files.filter((f) => f.isTrashed).length;
+      if (trashedCount > 0) {
+        setErrorMsg(`Total vault capacity reached (${MAX_VAULT_FILES} files). You have ${trashedCount} file(s) in Trash. Please empty your Trash before uploading new files.`);
+      } else {
+        setErrorMsg(`Total vault capacity reached (${MAX_VAULT_FILES} files). Please delete existing files before uploading new ones.`);
+      }
       return;
     }
 
@@ -779,7 +789,8 @@ export default function VaultView({ user }: VaultViewProps) {
   const activeFiles = files.filter((f) => !f.isTrashed);
   const trashedFiles = files.filter((f) => f.isTrashed);
   const totalStorageBytes = activeFiles.reduce((acc, f) => acc + f.fileSize, 0);
-  const usedPercent = Math.min(100, Math.round((activeFiles.length / MAX_VAULT_FILES) * 100));
+  const totalVaultFilesCount = files.length; // Count ALL files in database (both active and in trash)
+  const usedPercent = Math.min(100, Math.round((totalVaultFilesCount / MAX_VAULT_FILES) * 100));
 
   const visibleFolders = showMoreFolders ? folders : folders.slice(0, 6);
 
@@ -858,7 +869,8 @@ export default function VaultView({ user }: VaultViewProps) {
 
             <button
               onClick={() => setShowUploadModal(true)}
-              disabled={activeFiles.length >= MAX_VAULT_FILES}
+              disabled={files.length >= MAX_VAULT_FILES}
+              title={files.length >= MAX_VAULT_FILES ? "Limit reached (7 PDFs total including Trash). Empty trash to upload." : "Upload PDF"}
               className="px-4 py-2 bg-violet-600 hover:bg-violet-700 active:scale-98 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -871,13 +883,18 @@ export default function VaultView({ user }: VaultViewProps) {
         <div className="lg:col-span-4 bg-surface-app border border-hairline-app rounded-2xl px-5 py-3 sm:px-6 sm:py-3.5 shadow-xs flex flex-col justify-center gap-2">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-bold text-muted-soft-app uppercase tracking-wider font-mono">
-              Storage Used
+              Total Storage Used
             </span>
-            <div className="flex items-baseline gap-1">
+            <div className="flex items-baseline gap-1.5">
               <span className="text-sm font-black text-ink-app font-sans">
-                {activeFiles.length} / {MAX_VAULT_FILES}
+                {files.length} / {MAX_VAULT_FILES}
               </span>
-              <span className="text-[10px] font-bold text-muted-soft-app">PDFs</span>
+              <span className="text-[10px] font-bold text-muted-soft-app">Total PDFs</span>
+              {trashedFiles.length > 0 && (
+                <span className="text-[10px] font-bold text-rose-500 font-mono">
+                  ({trashedFiles.length} in Trash)
+                </span>
+              )}
             </div>
           </div>
 
@@ -1225,13 +1242,23 @@ export default function VaultView({ user }: VaultViewProps) {
                 </p>
               </div>
               {activeFiles.length === 0 && activeSubTab !== "trash" && (
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl cursor-pointer inline-flex items-center gap-1.5 shadow-md"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Upload First PDF</span>
-                </button>
+                files.length >= MAX_VAULT_FILES ? (
+                  <button
+                    onClick={() => setActiveSubTab("trash")}
+                    className="px-5 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs rounded-xl cursor-pointer inline-flex items-center gap-1.5 border border-rose-500/30"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Vault Full ({files.length} in Trash) • Empty Trash</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl cursor-pointer inline-flex items-center gap-1.5 shadow-md"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Upload First PDF</span>
+                  </button>
+                )
               )}
             </div>
           ) : viewMode === "grid" ? (
@@ -1665,6 +1692,15 @@ export default function VaultView({ user }: VaultViewProps) {
                     </div>
                   )}
 
+                  {files.length >= MAX_VAULT_FILES && (
+                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                      <span>
+                        Total vault limit reached ({MAX_VAULT_FILES} of {MAX_VAULT_FILES} files used). Please empty your Trash or permanently delete files before uploading new ones.
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex justify-end gap-3 pt-3 border-t border-slate-150 dark:border-slate-800/40">
                     <button
                       type="button"
@@ -1676,7 +1712,7 @@ export default function VaultView({ user }: VaultViewProps) {
                     </button>
                     <button
                       type="submit"
-                      disabled={!selectedFile || uploading}
+                      disabled={!selectedFile || uploading || files.length >= MAX_VAULT_FILES}
                       className="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 font-bold"
                     >
                       {uploading ? (
