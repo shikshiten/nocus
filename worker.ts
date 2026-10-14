@@ -335,6 +335,40 @@ Return ONLY a JSON object with this exact structure:
       }
     }
 
+    // Vault delete file from R2
+    if (url.pathname.startsWith("/api/vault/file/") && request.method === "DELETE") {
+      try {
+        const fileKey = decodeURIComponent(url.pathname.replace("/api/vault/file/", ""));
+        if (!fileKey) {
+          return jsonResponse({ error: "fileKey is required" }, 400);
+        }
+
+        if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {
+          return jsonResponse({ error: "Storage service is currently unavailable." }, 503);
+        }
+
+        const r2 = new S3Client({
+          region: "auto",
+          endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+          credentials: {
+            accessKeyId: env.R2_ACCESS_KEY_ID || "",
+            secretAccessKey: env.R2_SECRET_ACCESS_KEY || "",
+          },
+        });
+
+        const command = new DeleteObjectCommand({
+          Bucket: env.R2_BUCKET_NAME || "nocus",
+          Key: fileKey,
+        });
+
+        await r2.send(command);
+        return jsonResponse({ success: true });
+      } catch (err: any) {
+        console.error("Worker vault delete error:", err);
+        return jsonResponse({ error: "Failed to delete file from storage." }, 500);
+      }
+    }
+
     // Delegate static website requests to Cloudflare Workers Static Assets
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);

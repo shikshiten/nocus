@@ -341,14 +341,19 @@ export default function VaultView({ user }: VaultViewProps) {
 
     const expiredFiles = fileList.filter((f) => {
       if (!f.isTrashed || !f.trashedAt) return false;
-      return now - new Date(f.trashedAt).getTime() > SEVEN_DAYS_MS;
+      const trashedTimestamp = new Date(f.trashedAt).getTime();
+      return now - trashedTimestamp >= SEVEN_DAYS_MS;
     });
 
     if (expiredFiles.length === 0) return fileList;
 
     for (const expired of expiredFiles) {
       try {
-        await fetch(`/api/vault/file/${encodeURIComponent(expired.fileKey)}`, { method: "DELETE" }).catch(() => {});
+        // 1. Delete from Cloudflare R2 bucket
+        if (expired.fileKey && !expired.fileKey.startsWith("local_")) {
+          await fetch(`/api/vault/file/${encodeURIComponent(expired.fileKey)}`, { method: "DELETE" }).catch(() => {});
+        }
+        // 2. Delete from Turso if logged in
         if (user) {
           await deleteVaultFileFromTurso(expired.id, user.id);
         }
@@ -358,11 +363,14 @@ export default function VaultView({ user }: VaultViewProps) {
     }
 
     const activeList = fileList.filter((f) => !expiredFiles.some((exp) => exp.id === f.id));
-    if (!user) {
-      localStorage.setItem("meridian_vault_files", JSON.stringify(activeList));
-    }
+    
+    // Always sync cleaned active list to localStorage
+    const saved = localStorage.getItem("meridian_vault_files");
+    const localList: VaultFile[] = saved ? JSON.parse(saved) : [];
+    const remainingLocal = localList.filter((f) => !expiredFiles.some((exp) => exp.id === f.id));
+    localStorage.setItem("meridian_vault_files", JSON.stringify(remainingLocal));
 
-    setSuccessMsg(`Auto-purged ${expiredFiles.length} item(s) from Trash older than 7 days.`);
+    setSuccessMsg(`Auto-purged ${expiredFiles.length} item(s) older than 7 days from Trash & Cloud Storage.`);
     return activeList;
   };
 
@@ -593,22 +601,26 @@ export default function VaultView({ user }: VaultViewProps) {
     );
     setFiles(updatedFiles);
 
-    if (!user) {
-      localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
-    } else {
+    // Always sync updated status to localStorage
+    const saved = localStorage.getItem("meridian_vault_files");
+    const list: VaultFile[] = saved ? JSON.parse(saved) : [];
+    const updatedList = list.map((f) =>
+      f.id === file.id ? { ...f, isTrashed: true, trashedAt: now } : f
+    );
+    localStorage.setItem("meridian_vault_files", JSON.stringify(updatedList));
+
+    if (user && turso) {
       try {
-        if (turso) {
-          await turso.execute({
-            sql: "UPDATE vault_files SET is_trashed = 1, trashed_at = ? WHERE id = ?",
-            args: [now, file.id],
-          });
-        }
+        await turso.execute({
+          sql: "UPDATE vault_files SET is_trashed = 1, trashed_at = ? WHERE id = ?",
+          args: [now, file.id],
+        });
       } catch (err) {
         console.error("Error moving file to trash in DB:", err);
       }
     }
 
-    setSuccessMsg(`Moved "${file.fileName}" to Trash. Auto-deletes after 7 days.`);
+    setSuccessMsg(`Moved "${file.fileName}" to Trash. Auto-deletes permanently after 7 days.`);
   };
 
   // Requirement 4a: Restore from Trash
@@ -618,16 +630,20 @@ export default function VaultView({ user }: VaultViewProps) {
     );
     setFiles(updatedFiles);
 
-    if (!user) {
-      localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
-    } else {
+    // Always sync restored status to localStorage
+    const saved = localStorage.getItem("meridian_vault_files");
+    const list: VaultFile[] = saved ? JSON.parse(saved) : [];
+    const updatedList = list.map((f) =>
+      f.id === file.id ? { ...f, isTrashed: false, trashedAt: null } : f
+    );
+    localStorage.setItem("meridian_vault_files", JSON.stringify(updatedList));
+
+    if (user && turso) {
       try {
-        if (turso) {
-          await turso.execute({
-            sql: "UPDATE vault_files SET is_trashed = 0, trashed_at = NULL WHERE id = ?",
-            args: [file.id],
-          });
-        }
+        await turso.execute({
+          sql: "UPDATE vault_files SET is_trashed = 0, trashed_at = NULL WHERE id = ?",
+          args: [file.id],
+        });
       } catch (err) {
         console.error("Error restoring file from trash in DB:", err);
       }
@@ -638,32 +654,38 @@ export default function VaultView({ user }: VaultViewProps) {
 
   // Requirement 4b: Delete Permanently
   const handleDeletePermanently = async (file: VaultFile) => {
-    if (!window.confirm(`Are you sure you want to permanently delete "${file.fileName}"? This action cannot be undone.`)) {
+    if (!window.confirm(`Permanently delete "${file.fileName}"? This will delete the file completely from cloud storage and cannot be undone.`)) {
       return;
     }
 
     setDeletingId(file.id);
     setErrorMsg(null);
     try {
-      const deleteRes = await fetch(`/api/vault/file/${encodeURIComponent(file.fileKey)}`, {
-        method: "DELETE",
-      });
+      // 1. Delete file from Cloudflare R2 bucket
+      if (file.fileKey && !file.fileKey.startsWith("local_")) {
+        const deleteRes = await fetch(`/api/vault/file/${encodeURIComponent(file.fileKey)}`, {
+          method: "DELETE",
+        });
 
-      if (!deleteRes.ok) {
-        console.warn("Storage deletion warning: R2 file could not be removed directly.");
+        if (!deleteRes.ok) {
+          console.warn("Storage deletion warning: R2 file could not be removed directly.");
+        }
       }
 
+      // 2. Always remove from localStorage
+      const saved = localStorage.getItem("meridian_vault_files");
+      const list = saved ? JSON.parse(saved) : [];
+      const updatedList = list.filter((f: any) => f.id !== file.id);
+      localStorage.setItem("meridian_vault_files", JSON.stringify(updatedList));
+
+      // 3. Remove from Turso database if user is logged in
       if (user) {
         await deleteVaultFileFromTurso(file.id, user.id);
-      } else {
-        const saved = localStorage.getItem("meridian_vault_files");
-        const list = saved ? JSON.parse(saved) : [];
-        const updatedList = list.filter((f: any) => f.id !== file.id);
-        localStorage.setItem("meridian_vault_files", JSON.stringify(updatedList));
       }
 
-      setSuccessMsg(`Permanently deleted "${file.fileName}".`);
+      // 4. Update UI state immediately
       setFiles((prev) => prev.filter((f) => f.id !== file.id));
+      setSuccessMsg(`Permanently deleted "${file.fileName}" from storage.`);
     } catch (err: any) {
       console.error("Delete error:", err);
       setErrorMsg(err.message || "Failed to delete file.");
@@ -677,28 +699,36 @@ export default function VaultView({ user }: VaultViewProps) {
     const trashedFiles = files.filter((f) => f.isTrashed);
     if (trashedFiles.length === 0) return;
 
-    if (!window.confirm(`Permanently delete all ${trashedFiles.length} file(s) in Trash? This cannot be undone.`)) {
+    if (!window.confirm(`Permanently delete all ${trashedFiles.length} file(s) in Trash? This will remove all of them from cloud storage.`)) {
       return;
     }
 
     setLoading(true);
     try {
+      // 1. Delete all trashed files from Cloudflare R2 bucket
       for (const file of trashedFiles) {
-        await fetch(`/api/vault/file/${encodeURIComponent(file.fileKey)}`, { method: "DELETE" }).catch(() => {});
+        if (file.fileKey && !file.fileKey.startsWith("local_")) {
+          await fetch(`/api/vault/file/${encodeURIComponent(file.fileKey)}`, { method: "DELETE" }).catch(() => {});
+        }
       }
 
+      // 2. Clean localStorage
+      const saved = localStorage.getItem("meridian_vault_files");
+      const list = saved ? JSON.parse(saved) : [];
+      const remainingLocal = list.filter((f) => !f.isTrashed);
+      localStorage.setItem("meridian_vault_files", JSON.stringify(remainingLocal));
+
+      // 3. Clean Turso DB if logged in
       if (user && turso) {
         await turso.execute({
           sql: "DELETE FROM vault_files WHERE user_id = ? AND is_trashed = 1",
           args: [user.id],
         });
-      } else {
-        const remaining = files.filter((f) => !f.isTrashed);
-        localStorage.setItem("meridian_vault_files", JSON.stringify(remaining));
       }
 
+      // 4. Update UI state
       setFiles((prev) => prev.filter((f) => !f.isTrashed));
-      setSuccessMsg("Trash emptied successfully.");
+      setSuccessMsg(`Emptied trash: ${trashedFiles.length} file(s) permanently deleted from storage.`);
     } catch (err: any) {
       console.error("Empty trash error:", err);
       setErrorMsg("Failed to empty trash.");
@@ -1276,7 +1306,11 @@ export default function VaultView({ user }: VaultViewProps) {
 
                       {file.isTrashed && file.trashedAt && (
                         <p className="text-[9px] font-bold text-rose-500 font-mono">
-                          Trashed {new Date(file.trashedAt).toLocaleDateString()}
+                          {(() => {
+                            const daysPassed = Math.floor((Date.now() - new Date(file.trashedAt).getTime()) / (1000 * 60 * 60 * 24));
+                            const daysLeft = Math.max(0, 7 - daysPassed);
+                            return `Trashed • Auto-deletes in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
+                          })()}
                         </p>
                       )}
                     </div>
@@ -1408,7 +1442,11 @@ export default function VaultView({ user }: VaultViewProps) {
 
                           {file.isTrashed && file.trashedAt && (
                             <span className="text-xs font-bold text-rose-500 font-mono shrink-0">
-                              Trashed {new Date(file.trashedAt).toLocaleDateString()}
+                              {(() => {
+                                const daysPassed = Math.floor((Date.now() - new Date(file.trashedAt).getTime()) / (1000 * 60 * 60 * 24));
+                                const daysLeft = Math.max(0, 7 - daysPassed);
+                                return `Trashed • Auto-deletes in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
+                              })()}
                             </span>
                           )}
                         </div>
