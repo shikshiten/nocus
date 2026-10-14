@@ -46,14 +46,14 @@ async function generateContentWithRetry(
   maxRetries = 3,
   delayMs = 1500
 ): Promise<any> {
-  const initialModel = params.model || "gemini-2.5-flash";
+  const initialModel = params.model || "gemini-flash-latest";
   
   // Define fallback models to try if the initial model fails or is overloaded
   const fallbackCandidates = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-2.5-pro"
+    "gemini-flash-latest",
+    "gemini-3.5-flash",
+    "gemini-flash-lite-latest",
+    "gemini-3.8-flash"
   ];
   
   // Ensure we try the initial model first, followed by the rest of the candidates in order
@@ -245,53 +245,6 @@ async function startServer() {
         return res.status(400).json({ error: "Syllabus content is required (pdfBase64 or syllabusText)." });
       }
 
-      const openai = getOpenAIClient();
-
-      // If text syllabus and OpenAI is available, prioritize GPT-4o-mini
-      if (openai && syllabusText) {
-        try {
-          console.log("Parsing syllabus using OpenAI GPT-4o-mini...");
-          const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            response_format: { type: "json_object" },
-            messages: [
-              {
-                role: "system",
-                content: `You are an expert academic curriculum assistant. Parse the provided syllabus document completely and extract ALL Units, Modules, Chapters, and Topics into a highly structured JSON format.
-Analyze the ENTIRE document thoroughly across all sections. Do NOT stop after the first unit or skip any sections.
-Extract every single Unit/Module/Chapter (e.g. Unit 1, Unit 2, Unit 3, Unit 4, Unit 5, etc.) and all corresponding sub-topics under each unit.
-Group the topics logically under their respective Units.
-Keep the unit names descriptive (e.g. "Unit 1: Digital Fundamentals"), and keep each topic short, clear, and action-oriented (maximum 10 words per topic).
-
-Return ONLY a JSON object with this exact typescript structure:
-{
-  "subjectName": "string",
-  "units": [
-    {
-      "name": "string",
-      "topics": ["string"]
-    }
-  ]
-}`
-              },
-              {
-                role: "user",
-                content: `Here is the syllabus text to parse:\n\n${syllabusText}`
-              }
-            ],
-            temperature: 0.2
-          });
-
-          const raw = completion.choices[0]?.message?.content || "{}";
-          const parsed = cleanAndParseJSON(raw);
-          if (parsed && parsed.subjectName && Array.isArray(parsed.units)) {
-            return res.json(parsed);
-          }
-        } catch (openaiErr) {
-          console.warn("OpenAI syllabus parse failed, falling back to Gemini:", openaiErr);
-        }
-      }
-
       const ai = getAIClient();
       let contents: any[] = [];
 
@@ -330,8 +283,9 @@ Ensure the response contains no markdown block characters (like \`\`\`json) and 
         ];
       }
 
+      console.log("Parsing syllabus using Google Gemini flash-latest...");
       const response = await generateContentWithRetry(ai, {
-        model: 'gemini-2.5-flash',
+        model: 'gemini-flash-latest',
         contents,
         config: {
           maxOutputTokens: 8192,
@@ -514,7 +468,7 @@ Ensure the response contains no markdown formatting characters (like \`\`\`json)
 
       // Use fast multimodal model gemini-2.5-flash
       const response = await generateContentWithRetry(ai, {
-        model: "gemini-2.5-flash",
+        model: "gemini-flash-latest",
         contents,
         config: {
           maxOutputTokens: 8192,
@@ -645,7 +599,7 @@ Follow these strict design guidelines:
 5. Ensure the SVG is well-formed, valid, and uses standard tags like <rect>, <circle>, <path>, <defs>, <linearGradient>, etc. Use appropriate inline styling or presentation attributes.`;
 
       const response = await generateContentWithRetry(ai, {
-        model: "gemini-2.5-flash",
+        model: "gemini-flash-latest",
         contents: [systemPrompt]
       });
 
@@ -730,7 +684,7 @@ Example format:
 {"quote": "Continuous effort, not strength or intelligence, is the key to unlocking our potential.", "author": "Winston Churchill"}`;
 
       const response = await generateContentWithRetry(ai, {
-        model: "gemini-2.5-flash",
+        model: "gemini-flash-latest",
         contents: [systemPrompt],
         config: {
           responseMimeType: "application/json",

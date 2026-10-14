@@ -110,19 +110,7 @@ export default {
           return jsonResponse({ error: "Syllabus content is required." }, 400);
         }
 
-        // 1. Try OpenAI if text is provided and OPENAI_API_KEY is available
-        if (env.OPENAI_API_KEY && syllabusText) {
-          try {
-            const parsed = await parseSyllabusWithOpenAI(env.OPENAI_API_KEY, syllabusText);
-            if (parsed && parsed.subjectName && Array.isArray(parsed.units)) {
-              return jsonResponse(parsed);
-            }
-          } catch (openaiErr) {
-            console.error("Worker OpenAI parsing error:", openaiErr);
-          }
-        }
-
-        // 2. Try Gemini
+        // Use Gemini exclusively for syllabus parsing
         const gemini = getGeminiClient(env);
         if (gemini) {
           try {
@@ -152,7 +140,7 @@ Return ONLY a JSON object with this exact structure:
             }
 
             const response = await gemini.models.generateContent({
-              model: "gemini-2.5-flash",
+              model: "gemini-flash-latest",
               contents,
               config: {
                 responseMimeType: "application/json"
@@ -225,7 +213,7 @@ Return ONLY a JSON object with this exact structure:
           try {
             const systemPrompt = `You are an expert motivational coach. Generate a concise study quote (under 130 characters) for time: "${body.timeOfDay || "morning"}". Output JSON: {"quote": string, "author": string}`;
             const response = await gemini.models.generateContent({
-              model: "gemini-2.5-flash",
+              model: "gemini-flash-latest",
               contents: [systemPrompt],
               config: {
                 responseMimeType: "application/json",
@@ -267,7 +255,7 @@ Return ONLY a JSON object with this exact structure:
         if (gemini) {
           const systemPrompt = `Generate a clean vector avatar SVG for prompt: "${prompt}". Output ONLY a valid <svg viewBox="0 0 100 100">...</svg> without any markdown or formatting.`;
           const response = await gemini.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-flash-latest",
             contents: [systemPrompt]
           });
 
