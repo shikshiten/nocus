@@ -21,6 +21,7 @@ import {
   GraduationCap,
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   ScrollProgressBar,
@@ -125,6 +126,10 @@ export default function LandingPage() {
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
     }
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const features = [
@@ -915,17 +920,132 @@ export default function LandingPage() {
         </Reveal>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-8 px-4 sm:px-8 text-center text-xs text-slate-400">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <img src="/nocus-logo.png" alt="nocus logo" className="w-5 h-5 object-contain" />
-            <span className="font-bold text-white">Nocus Study Workspace</span>
-            <span>•</span>
-            <span>v2.5.0</span>
+      {/* Comprehensive Modern Footer */}
+      <footer className="border-t border-white/10 bg-[#05060D] pt-16 pb-12 px-4 sm:px-8 text-xs text-slate-400">
+        <div className="max-w-6xl mx-auto space-y-12">
+          {/* Main Footer Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 text-left">
+            {/* Column 1: Brand & Bio (Spans 2 cols on lg) */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center p-0.5 shadow-md shadow-indigo-600/20 bg-white/5 border border-white/10">
+                  <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
+                </div>
+                <div className="flex flex-col justify-center leading-none">
+                  <span className="text-[8px] font-extrabold uppercase tracking-widest text-indigo-400 font-mono mb-0.5">
+                    beta v2.5.0
+                  </span>
+                  <span className="font-sans text-lg font-black tracking-tight text-white">
+                    nocus
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
+                The all-in-one distraction-free workspace built for serious scholars. Extract syllabus PDFs with AI, track study streaks, and study offline privately.
+              </p>
+
+              <div className="flex items-center gap-2 pt-1">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  All Systems Operational
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  100% Free Forever
+                </span>
+              </div>
+            </div>
+
+            {/* Column 2: Product Features */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white font-mono">Features</h4>
+              <ul className="space-y-2 text-slate-400">
+                <li>
+                  <a href="#features" className="hover:text-white transition-colors">AI Syllabus Parser</a>
+                </li>
+                <li>
+                  <a href="#features" className="hover:text-white transition-colors">Pomodoro Focus Timer</a>
+                </li>
+                <li>
+                  <a href="#features" className="hover:text-white transition-colors">Daily Streak Tracker</a>
+                </li>
+                <li>
+                  <a href="#features" className="hover:text-white transition-colors">Document Study Vault</a>
+                </li>
+                <li>
+                  <a href="#features" className="hover:text-white transition-colors">Exam Countdown Calendar</a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 3: Study Resources */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white font-mono">Resources</h4>
+              <ul className="space-y-2 text-slate-400">
+                <li>
+                  <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
+                </li>
+                <li>
+                  <a href="#preview" className="hover:text-white transition-colors">Interactive Preview</a>
+                </li>
+                <li>
+                  <a href="#faq" className="hover:text-white transition-colors">Frequently Asked Questions</a>
+                </li>
+                <li>
+                  <button onClick={scrollToAuth} className="hover:text-white transition-colors text-left cursor-pointer">
+                    Student Login / Sign Up
+                  </button>
+                </li>
+                <li>
+                  <span className="text-slate-500">Formula Sheets (Coming Soon)</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 4: Privacy & Security */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white font-mono">Privacy & Trust</h4>
+              <ul className="space-y-2 text-slate-400">
+                <li>
+                  <span className="text-slate-300 font-medium">Offline-First Local Storage</span>
+                </li>
+                <li>
+                  <span className="text-slate-300 font-medium">Zero Ad Tracking</span>
+                </li>
+                <li>
+                  <span className="text-slate-300 font-medium">Turso Encrypted Cloud Sync</span>
+                </li>
+                <li>
+                  <span className="text-slate-300 font-medium">Clerk Enterprise Auth</span>
+                </li>
+                <li>
+                  <span className="text-slate-300 font-medium">Student Confidentiality</span>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div>
-            Built with ❤️ for focused students everywhere.
+
+          {/* Bottom Bar: Copyright, Heart Tag, and Back to Top */}
+          <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <div className="flex items-center gap-2">
+              <span>© {new Date().getFullYear()} Nocus Study Workspace.</span>
+              <span>All rights reserved.</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-slate-400">
+              <span>Built with</span>
+              <span className="text-rose-500">❤️</span>
+              <span>for focused students, researchers & scholars worldwide.</span>
+            </div>
+
+            <button
+              onClick={scrollToTop}
+              className="inline-flex items-center gap-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              title="Scroll back to top"
+            >
+              <span>Back to top</span>
+              <ChevronUp className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </footer>
