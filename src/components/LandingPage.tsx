@@ -56,12 +56,13 @@ export default function LandingPage() {
 
   const hintOpacity = useTransform(scrollY, [0, 80], [1, 0]);
 
-  // Hero section scroll parallax
+  // Hero section scroll parallax with spring smoothing
   const heroRef = useRef<HTMLElement>(null);
-  const { scrollYProgress: heroProgress } = useScroll({
+  const { scrollYProgress: rawHeroProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
   });
+  const heroProgress = useSpring(rawHeroProgress, MOTION_CONFIG.springPhysics);
 
   const heroTextY = useTransform(
     heroProgress,
@@ -71,10 +72,10 @@ export default function LandingPage() {
   const heroTextOpacity = useTransform(
     heroProgress,
     [0, 0.85, 1],
-    [1, 0.7, MOTION_CONFIG.heroParallaxOpacityEnd]
+    [1, 0.8, MOTION_CONFIG.heroParallaxOpacityEnd]
   );
 
-  // Soft decorative background glow blobs with depth parallax
+  // Soft decorative background glow blobs with depth parallax & spring inertia
   const blob1Y = useTransform(
     heroProgress,
     [0, 1],
@@ -91,12 +92,13 @@ export default function LandingPage() {
     [0, isMobile ? MOTION_CONFIG.blobParallaxMobileY[2] : MOTION_CONFIG.blobParallaxDesktopY[2]]
   );
 
-  // App Mockup Preview scroll-linked scale & 3D tilt
+  // App Mockup Preview scroll-linked scale & 3D tilt with spring smoothing
   const previewRef = useRef<HTMLElement>(null);
-  const { scrollYProgress: previewProgress } = useScroll({
+  const { scrollYProgress: rawPreviewProgress } = useScroll({
     target: previewRef,
     offset: ["start end", "center center"],
   });
+  const previewProgress = useSpring(rawPreviewProgress, MOTION_CONFIG.springPhysics);
 
   const previewScale = useTransform(
     previewProgress,
@@ -196,20 +198,29 @@ export default function LandingPage() {
       {/* Top Fixed Reading Progress Indicator */}
       <ScrollProgressBar />
 
-      {/* Decorative Glow Background Spheres with Depth Parallax */}
+      {/* Decorative Glow Background Spheres with Depth Parallax (GPU-optimized radial gradients) */}
       <motion.div
-        style={shouldReduceMotion ? undefined : { y: blob1Y }}
-        className="absolute top-[-8%] left-[-10%] w-[55%] h-[55%] bg-violet-600/10 rounded-full blur-[140px] pointer-events-none will-change-transform"
+        className="absolute top-[-8%] left-[-10%] w-[55vw] h-[55vw] max-w-[750px] max-h-[750px] rounded-full pointer-events-none will-change-transform"
+        style={{
+          background: "radial-gradient(circle, rgba(124, 58, 237, 0.13) 0%, rgba(79, 70, 229, 0.04) 50%, transparent 70%)",
+          ...(shouldReduceMotion ? {} : { y: blob1Y }),
+        }}
         aria-hidden="true"
       />
       <motion.div
-        style={shouldReduceMotion ? undefined : { y: blob2Y }}
-        className="absolute top-[22%] right-[-10%] w-[48%] h-[48%] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none will-change-transform"
+        className="absolute top-[22%] right-[-10%] w-[48vw] h-[48vw] max-w-[650px] max-h-[650px] rounded-full pointer-events-none will-change-transform"
+        style={{
+          background: "radial-gradient(circle, rgba(79, 70, 229, 0.13) 0%, rgba(147, 51, 234, 0.04) 50%, transparent 70%)",
+          ...(shouldReduceMotion ? {} : { y: blob2Y }),
+        }}
         aria-hidden="true"
       />
       <motion.div
-        style={shouldReduceMotion ? undefined : { y: blob3Y }}
-        className="absolute bottom-[-10%] left-[20%] w-[42%] h-[42%] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none will-change-transform"
+        className="absolute bottom-[-10%] left-[20%] w-[42vw] h-[42vw] max-w-[600px] max-h-[600px] rounded-full pointer-events-none will-change-transform"
+        style={{
+          background: "radial-gradient(circle, rgba(168, 85, 247, 0.11) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%)",
+          ...(shouldReduceMotion ? {} : { y: blob3Y }),
+        }}
         aria-hidden="true"
       />
 
@@ -491,10 +502,10 @@ export default function LandingPage() {
 
       {/* Interactive App Mockup Preview with scroll-linked scale & 3D tilt */}
       <section id="preview" ref={previewRef} className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto relative">
-        {/* Soft reactive glow behind mockup that intensifies on scroll */}
+        {/* Soft reactive glow behind mockup that intensifies on scroll (GPU-friendly) */}
         <motion.div
           style={{ opacity: shouldReduceMotion ? 0.25 : previewGlowOpacity }}
-          className="absolute inset-0 bg-gradient-to-r from-indigo-600/25 via-purple-600/20 to-pink-600/25 rounded-3xl blur-3xl pointer-events-none -z-10"
+          className="absolute inset-0 bg-gradient-to-r from-indigo-600/20 via-purple-600/15 to-pink-600/20 rounded-3xl blur-2xl pointer-events-none -z-10 will-change-opacity"
           aria-hidden="true"
         />
 
@@ -506,9 +517,11 @@ export default function LandingPage() {
                   scale: previewScale,
                   rotateX: previewRotateX,
                   transformPerspective: 1000,
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
                 }
           }
-          className="p-3 sm:p-5 bg-white/5 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-xs will-change-transform"
+          className="p-3 sm:p-5 bg-white/5 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-sm will-change-transform"
         >
           <div className="bg-[#0A0C1B] rounded-2xl border border-white/10 overflow-hidden shadow-inner p-4 sm:p-6 space-y-6">
             {/* Mockup Header */}

@@ -10,27 +10,36 @@ import {
 
 /**
  * Global Motion Configuration & Tuning Center
- * Adjust animation distances, speeds, and timing curves in this single location.
+ * Refined for 120fps butter-smooth responsiveness across mobile & desktop.
  */
 export const MOTION_CONFIG = {
   // Reveal timing
-  duration: 0.6,
-  ease: [0.16, 1, 0.3, 1] as const, // Smooth cubic ease-out
-  staggerChildren: 0.09,
-  viewportAmount: 0.25,
+  duration: 0.5,
+  ease: [0.22, 1, 0.36, 1] as const, // Apple/Vercel standard fluid cubic bezier
+  staggerChildren: 0.07,
+  viewportAmount: 0.12, // Triggers earlier to avoid feeling delayed or pop-in
+  defaultYOffset: 18,
+
+  // Spring physics for smooth scroll interpolation
+  springPhysics: {
+    stiffness: 100,
+    damping: 24,
+    mass: 0.15,
+    restDelta: 0.001,
+  },
 
   // Hero parallax
-  heroParallaxDesktopY: -60,
-  heroParallaxMobileY: -25,
-  heroParallaxOpacityEnd: 0.35,
+  heroParallaxDesktopY: -45,
+  heroParallaxMobileY: -18,
+  heroParallaxOpacityEnd: 0.45,
 
   // Decorative blobs parallax
-  blobParallaxDesktopY: [-40, 50, -30] as const,
-  blobParallaxMobileY: [-15, 20, -10] as const,
+  blobParallaxDesktopY: [-25, 35, -20] as const,
+  blobParallaxMobileY: [-10, 15, -8] as const,
 
   // Mockup preview
-  previewScaleStart: 0.94,
-  previewTiltDeg: 7,
+  previewScaleStart: 0.96,
+  previewTiltDeg: 4,
 
   // Interactive micro-lift
   hoverLiftY: -3,
@@ -38,14 +47,14 @@ export const MOTION_CONFIG = {
 };
 
 /**
- * Top-of-page fixed reading/scroll progress indicator.
+ * Top-of-page fixed reading/scroll progress indicator with silky spring damping.
  */
 export function ScrollProgressBar({ className = "" }: { className?: string }) {
   const { scrollYProgress } = useScroll();
   const shouldReduceMotion = useReducedMotion();
   const scaleX = useSpring(scrollYProgress, {
-    stiffness: 220,
-    damping: 30,
+    stiffness: 300,
+    damping: 35,
     restDelta: 0.001,
   });
 
@@ -68,12 +77,12 @@ export interface RevealProps extends HTMLMotionProps<"div"> {
 }
 
 /**
- * Reusable scroll-reveal wrapper that animates into view once visible.
+ * Reusable scroll-reveal wrapper that animates smoothly into view.
  */
 export function Reveal({
   children,
   delay = 0,
-  yOffset = 24,
+  yOffset = MOTION_CONFIG.defaultYOffset,
   className = "",
   ...props
 }: RevealProps) {
@@ -103,13 +112,13 @@ const containerVariants: Variants = {
     opacity: 1,
     transition: {
       staggerChildren: MOTION_CONFIG.staggerChildren,
-      delayChildren: 0.04,
+      delayChildren: 0.02,
     },
   },
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,
     y: 0,
@@ -126,7 +135,7 @@ const itemVariants: Variants = {
 export function StaggerGroup({
   children,
   className = "",
-  viewportAmount = 0.2,
+  viewportAmount = MOTION_CONFIG.viewportAmount,
   ...props
 }: {
   children: React.ReactNode;
