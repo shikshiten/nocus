@@ -46,12 +46,13 @@ async function generateContentWithRetry(
   maxRetries = 3,
   delayMs = 1500
 ): Promise<any> {
-  const initialModel = params.model || "gemini-3.8-flash";
+  const initialModel = params.model || "gemini-2.5-flash";
   
   // Define fallback models to try if the initial model fails or is overloaded
   const fallbackCandidates = [
-    "gemini-3.8-flash",
-    "gemini-3.5-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
     "gemini-flash-latest",
     "gemini-flash-lite-latest"
   ];

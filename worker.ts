@@ -31,7 +31,7 @@ function jsonResponse(data: any, status = 200): Response {
 }
 
 function getGeminiClient(env: Env): GoogleGenAI | null {
-  const key = (env.GEMINI_API_KEY || "").trim();
+  const key = (env.GEMINI_API_KEY || (typeof process !== "undefined" ? process.env?.GEMINI_API_KEY : "") || "").trim();
   if (!key) return null;
   try {
     return new GoogleGenAI({ apiKey: key });
@@ -265,13 +265,19 @@ Return ONLY a JSON object with this exact structure:
                   mimeType: mimeType || "application/pdf"
                 }
               });
-              contents.push(prompt);
+              contents.push({ text: prompt });
             }
           } else {
             contents.push(`Syllabus Copy-Pasted Text:\n${syllabusText}\n\n${prompt}`);
           }
 
-          const candidateModels = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"];
+          const candidateModels = [
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-flash-latest",
+            "gemini-flash-lite-latest"
+          ];
           for (const model of candidateModels) {
             try {
               const response = await gemini.models.generateContent({

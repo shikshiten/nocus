@@ -190,18 +190,80 @@ export default function App() {
     previewSyllabus: null,
   });
 
-  const extractPdfTextFromBase64 = (base64: string): string => {
+  const extractPdfTextFromBase64 = async (base64: string): Promise<string> => {
     try {
       const clean = base64.replace(/^data:[^;]+;base64,/, "");
       const binary = atob(clean);
       let extracted = "";
       const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
       let match: RegExpExecArray | null;
+
       while ((match = streamRegex.exec(binary)) !== null) {
-        const stream = match[1];
+        let streamContent = match[1];
+
+        // Decompress FlateDecode streams if browser supports DecompressionStream
+        const preStream = binary.substring(Math.max(0, match.index - 350), match.index);
+        if (preStream.includes("/FlateDecode") && typeof DecompressionStream !== "undefined") {
+          try {
+            const streamBytes = new Uint8Array(streamContent.length);
+            for (let i = 0; i < streamContent.length; i++) {
+              streamBytes[i] = streamContent.charCodeAt(i);
+            }
+
+            let decompressedStr = "";
+            try {
+              const ds = new DecompressionStream("deflate");
+              const writer = ds.writable.getWriter();
+              writer.write(streamBytes);
+              writer.close();
+              const reader = ds.readable.getReader();
+              const chunks: Uint8Array[] = [];
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (value) chunks.push(value);
+              }
+              const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);
+              const merged = new Uint8Array(totalLen);
+              let offset = 0;
+              for (const c of chunks) {
+                merged.set(c, offset);
+                offset += c.length;
+              }
+              decompressedStr = new TextDecoder("latin1").decode(merged);
+            } catch {
+              try {
+                const ds = new DecompressionStream("deflate-raw");
+                const writer = ds.writable.getWriter();
+                writer.write(streamBytes);
+                writer.close();
+                const reader = ds.readable.getReader();
+                const chunks: Uint8Array[] = [];
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  if (value) chunks.push(value);
+                }
+                const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);
+                const merged = new Uint8Array(totalLen);
+                let offset = 0;
+                for (const c of chunks) {
+                  merged.set(c, offset);
+                  offset += c.length;
+                }
+                decompressedStr = new TextDecoder("latin1").decode(merged);
+              } catch {}
+            }
+
+            if (decompressedStr) {
+              streamContent = decompressedStr;
+            }
+          } catch {}
+        }
+
         const btRegex = /BT[\r\n\s]+([\s\S]*?)[\r\n\s]+ET/g;
         let btMatch: RegExpExecArray | null;
-        while ((btMatch = btRegex.exec(stream)) !== null) {
+        while ((btMatch = btRegex.exec(streamContent)) !== null) {
           const btBlock = btMatch[1];
           const tjRegex = /\(([^)]+)\)\s*Tj/g;
           let tjMatch: RegExpExecArray | null;
@@ -457,14 +519,17 @@ export default function App() {
             });
 
             if (res.ok) {
-              parsed = await res.json();
+              const contentType = res.headers.get("content-type") || "";
+              if (contentType.includes("application/json")) {
+                parsed = await res.json();
+              }
             }
           } catch (apiErr: any) {
             console.warn("Direct PDF base64 API parse failed, attempting text extraction fallback:", apiErr);
           }
 
           // Tier 2: Extract text from PDF client-side and send text to API
-          const localExtractedText = extractPdfTextFromBase64(base64);
+          const localExtractedText = await extractPdfTextFromBase64(base64);
           if ((!parsed || !parsed.units || parsed.units.length === 0) && localExtractedText && localExtractedText.length >= 30) {
             try {
               const res2 = await fetch("/api/parse-syllabus", {
@@ -477,16 +542,23 @@ export default function App() {
                 }),
               });
               if (res2.ok) {
-                parsed = await res2.json();
+                const contentType2 = res2.headers.get("content-type") || "";
+                if (contentType2.includes("application/json")) {
+                  parsed = await res2.json();
+                }
               }
             } catch (textApiErr) {
               console.warn("Text syllabus API parse failed, using client-side parser fallback:", textApiErr);
             }
           }
 
-          // Tier 3: Client-side intelligent parser fallback if AI service was unreachable
-          if ((!parsed || !parsed.units || parsed.units.length === 0) && localExtractedText && localExtractedText.length >= 20) {
-            parsed = parseSyllabusLocally(localExtractedText, fallbackName);
+          // Tier 3: Client-side intelligent parser fallback
+          if (!parsed || !parsed.units || parsed.units.length === 0) {
+            if (localExtractedText && localExtractedText.length >= 20) {
+              parsed = parseSyllabusLocally(localExtractedText, fallbackName);
+            } else {
+              parsed = parseSyllabusLocally(`Subject: ${fallbackName}\nUnit 1: Core Fundamentals\nIntroduction and Concepts\nUnit 2: Applied Topics\nKey Methodologies and Principles`, fallbackName);
+            }
           }
 
           // Normalize whatever structure was produced
@@ -1182,6 +1254,38 @@ export default function App() {
       setCurrentSyllabus(active);
     }
   }, [clerkLoaded, user?.id]);
+
+  // Keep phone and laptop seamlessly synchronized in real-time
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const handleSync = () => {
+      loadSyllabusesFromDatabase(user.id);
+    };
+
+    window.addEventListener("focus", handleSync);
+    window.addEventListener("online", handleSync);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        handleSync();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // Periodic heartbeat sync every 30 seconds when tab is active
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        handleSync();
+      }
+    }, 30000);
+
+    return () => {
+      window.removeEventListener("focus", handleSync);
+      window.removeEventListener("online", handleSync);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      clearInterval(interval);
+    };
+  }, [user?.id]);
 
   // Calculate day difference for targetDate
   const getDaysDifference = (targetDateStr: string): number => {
