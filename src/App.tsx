@@ -1206,7 +1206,7 @@ export default function App() {
 
 
   // Load syllabuses from Turso with indestructible localStorage backup
-  const loadSyllabusesFromDatabase = async (uid: string) => {
+  const loadSyllabusesFromDatabase = async (uid: string, showToast = false) => {
     try {
       setSyncing(true);
       const tursoList = await loadUserSyllabusesFromTurso(uid);
@@ -1220,37 +1220,55 @@ export default function App() {
         }
       } catch {}
 
-      if (tursoList && tursoList.length > 0) {
-        // Merge Turso list with any local items
-        const mergedMap = new Map<string, Syllabus>();
-        for (const item of tursoList) {
-          mergedMap.set(item.id, item);
+      if (Array.isArray(tursoList) && tursoList.length > 0) {
+        // Cloud has data: Cloud is authoritative source of truth for logged-in user
+        setSyllabuses(tursoList);
+        localStorage.setItem("syllabuses", JSON.stringify(tursoList));
+
+        const savedActiveId = localStorage.getItem("activeSyllabusId");
+        const active = tursoList.find(s => s.id === savedActiveId) || tursoList[0] || null;
+        setCurrentSyllabus(active);
+        if (active) {
+          localStorage.setItem("activeSyllabusId", active.id);
         }
-        for (const item of localList) {
-          if (!mergedMap.has(item.id)) {
-            mergedMap.set(item.id, { ...item, userId: uid });
-            syncSyllabusToTurso({ ...item, userId: uid }, uid).catch(() => {});
+        if (showToast) {
+          addNotification("Cloud Synced ☁️", `Live cloud sync completed! Loaded ${tursoList.length} subject(s).`, "success");
+        }
+      } else if (Array.isArray(tursoList) && tursoList.length === 0) {
+        // Cloud is currently empty. Check if this device has existing guest/local syllabuses that need first-time cloud migration
+        const migrationKey = `nocus_migrated_${uid}`;
+        const hasMigrated = localStorage.getItem(migrationKey);
+
+        if (!hasMigrated && localList && localList.length > 0) {
+          // First time syncing guest data to user's new account
+          for (const item of localList) {
+            await syncSyllabusToTurso({ ...item, userId: uid }, uid);
+          }
+          localStorage.setItem(migrationKey, "true");
+          setSyllabuses(localList);
+          if (showToast) {
+            addNotification("Cloud Synced ☁️", `Uploaded ${localList.length} local syllabus(es) to cloud.`, "success");
+          }
+        } else {
+          // Cloud has 0 items
+          setSyllabuses([]);
+          localStorage.setItem("syllabuses", JSON.stringify([]));
+          setCurrentSyllabus(null);
+          localStorage.removeItem("activeSyllabusId");
+          if (showToast) {
+            addNotification("Cloud Synced ☁️", "Cloud is up to date (no subjects).", "info");
           }
         }
-        const mergedList = Array.from(mergedMap.values());
-        mergedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setSyllabuses(mergedList);
-        localStorage.setItem("syllabuses", JSON.stringify(mergedList));
-
-        const savedActiveId = localStorage.getItem("activeSyllabusId");
-        const active = mergedList.find(s => s.id === savedActiveId) || mergedList[0] || null;
-        setCurrentSyllabus(active);
-      } else if (localList && localList.length > 0) {
-        // Turso returned empty (e.g. offline, initial cloud sync, or connection glitch):
-        // NEVER WIPE LOCAL DATA! Keep local data and sync it up to Turso!
-        setSyllabuses(localList);
-        const savedActiveId = localStorage.getItem("activeSyllabusId");
-        const active = localList.find(s => s.id === savedActiveId) || localList[0] || null;
-        setCurrentSyllabus(active);
-
-        // Upload local items to Turso so they persist in cloud
-        for (const item of localList) {
-          syncSyllabusToTurso({ ...item, userId: uid }, uid).catch(() => {});
+      } else {
+        // Turso returned null or network disconnected: Fallback to local cache so user never loses view
+        if (localList && localList.length > 0) {
+          setSyllabuses(localList);
+          const savedActiveId = localStorage.getItem("activeSyllabusId");
+          const active = localList.find(s => s.id === savedActiveId) || localList[0] || null;
+          setCurrentSyllabus(active);
+        }
+        if (showToast) {
+          addNotification("Offline Cache 📱", "Working from cached syllabuses. Reconnecting...", "info");
         }
       }
     } catch (err) {
@@ -1308,12 +1326,12 @@ export default function App() {
     };
     document.addEventListener("visibilitychange", handleVisibility);
 
-    // Periodic heartbeat sync every 30 seconds when tab is active
+    // Periodic heartbeat sync every 12 seconds when tab is active
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         handleSync();
       }
-    }, 30000);
+    }, 12000);
 
     return () => {
       window.removeEventListener("focus", handleSync);
@@ -2008,10 +2026,7 @@ export default function App() {
 
           const updatedList = syllabuses.filter(s => s.id !== id);
           setSyllabuses(updatedList);
-
-          if (!user) {
-            localStorage.setItem("syllabuses", JSON.stringify(updatedList));
-          }
+          localStorage.setItem("syllabuses", JSON.stringify(updatedList));
 
           if (currentSyllabus?.id === id) {
             const nextActive = updatedList[0] || null;
@@ -3005,6 +3020,25 @@ export default function App() {
             )}
 
 
+
+            {/* Real-time Cloud Sync Button */}
+            <button
+              onClick={() => {
+                if (user?.id) {
+                  loadSyllabusesFromDatabase(user.id, true);
+                } else {
+                  addNotification("Cloud Sync ☁️", "Sign in to keep your syllabuses synced across your phone and laptop in real-time.", "info");
+                }
+              }}
+              disabled={syncing}
+              className={`p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--text)] cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 shadow-xs flex items-center justify-center ${
+                syncing ? "opacity-80" : ""
+              }`}
+              title={user ? "Sync with Cloud (Turso)" : "Sign in to enable live cross-device sync"}
+              aria-label="Sync with cloud"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin text-primary-app" : ""}`} />
+            </button>
 
             {/* Dark Mode Toggle */}
             <button

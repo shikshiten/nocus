@@ -7,6 +7,7 @@ import OpenAI from "openai";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import dotenv from "dotenv";
+import { createClient as createTursoClient } from "@libsql/client/web";
 
 dotenv.config();
 
@@ -961,6 +962,130 @@ Example format:
     } catch (error: any) {
       console.error("Error deleting file from R2:", error);
       res.status(500).json({ error: "Failed to delete file from storage." });
+    }
+  });
+
+  // Turso Database Cross-Device Sync Endpoints
+  const defaultTursoUrl = "https://nocus-shikshiten.aws-ap-south-1.turso.io";
+  const defaultTursoToken = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJnaWQiOiJhZTI2ZTkxYy0yZWIzLTQzOTctYTFmOS1jNDhiMzg4MzYzZGMiLCJpYXQiOjE3OTIwMDMxNzUsImtpZCI6ImFId2pRZzFWQ1ZLejB6OW55MVprRDhrYUR4UkhlOG1Ca2YwTkRQQnpTZGsiLCJyaWQiOiI1ZGU0ZjYwNy1hNTIxLTQ1ODktYTU2Mi01ZDU1N2Y4MGJlZjUifQ.g-_w5JnSYEI8F4sGpd71lfruwV4mMiJiOmGScpOzt1BEeRQdeh4mbkJFINICEwYlugWV0Wn3eeXbBeXa69FQCw";
+  const rawTursoUrl = (process.env.VITE_TURSO_DATABASE_URL || process.env.TURSO_DATABASE_URL || defaultTursoUrl).trim();
+  const tursoHttpUrl = rawTursoUrl.replace(/^libsql:\/\//, "https://");
+  const tursoToken = (process.env.VITE_TURSO_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || defaultTursoToken).trim();
+
+  let tursoClient: any = null;
+  try {
+    tursoClient = createTursoClient({
+      url: tursoHttpUrl,
+      authToken: tursoToken,
+    });
+  } catch (err) {
+    console.warn("Failed to initialize Turso client in server.ts:", err);
+  }
+
+  // GET /api/sync-syllabuses
+  app.get("/api/sync-syllabuses", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database client unavailable" });
+      }
+      const userId = req.query.userId || req.query.user_id;
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      const result = await tursoClient.execute({
+        sql: "SELECT * FROM syllabuses WHERE user_id = ? ORDER BY created_at DESC",
+        args: [String(userId)],
+      });
+
+      const syllabuses = result.rows.map((row: any) => ({
+        id: String(row.id),
+        userId: String(row.user_id),
+        subjectName: String(row.subject_name),
+        units: typeof row.units === "string" ? JSON.parse(row.units) : row.units || [],
+        examDate: row.exam_date ? String(row.exam_date) : undefined,
+        dailyTarget: row.daily_target ? Number(row.daily_target) : 4,
+        streak: row.streak ? Number(row.streak) : 0,
+        lastStudyDate: row.last_study_date ? String(row.last_study_date) : undefined,
+        keepNotes: typeof row.keep_notes === "string" ? JSON.parse(row.keep_notes) : row.keep_notes || [],
+        plannedTopicsToday: typeof row.planned_topics_today === "string" ? JSON.parse(row.planned_topics_today) : row.planned_topics_today || [],
+        createdAt: row.created_at ? String(row.created_at) : new Date().toISOString(),
+      }));
+
+      return res.json({ syllabuses });
+    } catch (err: any) {
+      console.error("Server sync error (GET):", err);
+      return res.status(500).json({ error: err?.message || "Sync failed" });
+    }
+  });
+
+  // POST /api/sync-syllabuses
+  app.post("/api/sync-syllabuses", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database client unavailable" });
+      }
+      const { syllabus, userId } = req.body || {};
+      if (!syllabus || !userId) {
+        return res.status(400).json({ error: "syllabus and userId are required" });
+      }
+
+      await tursoClient.execute({
+        sql: `INSERT INTO syllabuses (id, user_id, subject_name, exam_date, daily_target, streak, last_study_date, units, keep_notes, planned_topics_today, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+              subject_name = excluded.subject_name,
+              exam_date = excluded.exam_date,
+              daily_target = excluded.daily_target,
+              streak = excluded.streak,
+              last_study_date = excluded.last_study_date,
+              units = excluded.units,
+              keep_notes = excluded.keep_notes,
+              planned_topics_today = excluded.planned_topics_today,
+              updated_at = CURRENT_TIMESTAMP`,
+        args: [
+          syllabus.id,
+          userId,
+          syllabus.subjectName,
+          syllabus.examDate || null,
+          syllabus.dailyTarget || 4,
+          syllabus.streak || 0,
+          syllabus.lastStudyDate || null,
+          JSON.stringify(syllabus.units || []),
+          JSON.stringify(syllabus.keepNotes || []),
+          JSON.stringify(syllabus.plannedTopicsToday || []),
+          syllabus.createdAt || new Date().toISOString(),
+        ],
+      });
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Server sync error (POST):", err);
+      return res.status(500).json({ error: err?.message || "Sync failed" });
+    }
+  });
+
+  // DELETE /api/sync-syllabuses
+  app.delete("/api/sync-syllabuses", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database client unavailable" });
+      }
+      const id = req.query.id;
+      const userId = req.query.userId || req.query.user_id;
+      if (!id || !userId) {
+        return res.status(400).json({ error: "id and userId are required" });
+      }
+
+      await tursoClient.execute({
+        sql: "DELETE FROM syllabuses WHERE id = ? AND user_id = ?",
+        args: [String(id), String(userId)],
+      });
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Server sync error (DELETE):", err);
+      return res.status(500).json({ error: err?.message || "Sync delete failed" });
     }
   });
 

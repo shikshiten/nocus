@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createClient } from "@libsql/client/web";
 
 export interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> };
@@ -222,6 +223,84 @@ export default {
     // Health check endpoint
     if (url.pathname === "/api/health") {
       return jsonResponse({ status: "ok", provider: "Cloudflare Workers" });
+    }
+
+    // Turso Live Cloud Sync Endpoint
+    if (url.pathname === "/api/sync-syllabuses") {
+      const defaultTursoUrl = "https://nocus-shikshiten.aws-ap-south-1.turso.io";
+      const defaultTursoToken = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJnaWQiOiJhZTI2ZTkxYy0yZWIzLTQzOTctYTFmOS1jNDhiMzg4MzYzZGMiLCJpYXQiOjE3OTIwMDMxNzUsImtpZCI6ImFId2pRZzFWQ1ZLejB6OW55MVprRDhrYUR4UkhlOG1Ca2YwTkRQQnpTZGsiLCJyaWQiOiI1ZGU0ZjYwNy1hNTIxLTQ1ODktYTU2Mi01ZDU1N2Y4MGJlZjUifQ.g-_w5JnSYEI8F4sGpd71lfruwV4mMiJiOmGScpOzt1BEeRQdeh4mbkJFINICEwYlugWV0Wn3eeXbBeXa69FQCw";
+      const tursoClient = createClient({
+        url: defaultTursoUrl,
+        authToken: defaultTursoToken,
+      });
+
+      if (request.method === "GET") {
+        const userId = url.searchParams.get("userId");
+        if (!userId) return jsonResponse({ error: "userId required" }, 400);
+        const res = await tursoClient.execute({
+          sql: "SELECT * FROM syllabuses WHERE user_id = ? ORDER BY created_at DESC",
+          args: [userId],
+        });
+        const syllabuses = res.rows.map((row: any) => ({
+          id: String(row.id),
+          userId: String(row.user_id),
+          subjectName: String(row.subject_name),
+          units: typeof row.units === "string" ? JSON.parse(row.units) : row.units || [],
+          examDate: row.exam_date ? String(row.exam_date) : undefined,
+          dailyTarget: row.daily_target ? Number(row.daily_target) : 4,
+          streak: row.streak ? Number(row.streak) : 0,
+          lastStudyDate: row.last_study_date ? String(row.last_study_date) : undefined,
+          keepNotes: typeof row.keep_notes === "string" ? JSON.parse(row.keep_notes) : row.keep_notes || [],
+          plannedTopicsToday: typeof row.planned_topics_today === "string" ? JSON.parse(row.planned_topics_today) : row.planned_topics_today || [],
+          createdAt: row.created_at ? String(row.created_at) : new Date().toISOString(),
+        }));
+        return jsonResponse({ syllabuses });
+      }
+
+      if (request.method === "POST") {
+        const body: any = await request.json().catch(() => ({}));
+        const { syllabus, userId } = body;
+        if (!syllabus || !userId) return jsonResponse({ error: "syllabus and userId required" }, 400);
+        await tursoClient.execute({
+          sql: `INSERT INTO syllabuses (id, user_id, subject_name, exam_date, daily_target, streak, last_study_date, units, keep_notes, planned_topics_today, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                subject_name = excluded.subject_name,
+                exam_date = excluded.exam_date,
+                daily_target = excluded.daily_target,
+                streak = excluded.streak,
+                last_study_date = excluded.last_study_date,
+                units = excluded.units,
+                keep_notes = excluded.keep_notes,
+                planned_topics_today = excluded.planned_topics_today,
+                updated_at = CURRENT_TIMESTAMP`,
+          args: [
+            syllabus.id,
+            userId,
+            syllabus.subjectName,
+            syllabus.examDate || null,
+            syllabus.dailyTarget || 4,
+            syllabus.streak || 0,
+            syllabus.lastStudyDate || null,
+            JSON.stringify(syllabus.units || []),
+            JSON.stringify(syllabus.keepNotes || []),
+            JSON.stringify(syllabus.plannedTopicsToday || []),
+            syllabus.createdAt || new Date().toISOString(),
+          ],
+        });
+        return jsonResponse({ success: true });
+      }
+
+      if (request.method === "DELETE") {
+        const id = url.searchParams.get("id");
+        const userId = url.searchParams.get("userId");
+        if (!id || !userId) return jsonResponse({ error: "id and userId required" }, 400);
+        await tursoClient.execute({
+          sql: "DELETE FROM syllabuses WHERE id = ? AND user_id = ?",
+          args: [id, userId],
+        });
+        return jsonResponse({ success: true });
+      }
     }
 
     // Parse syllabus endpoint
