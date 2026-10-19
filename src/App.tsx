@@ -3342,7 +3342,7 @@ export default function App() {
                 ← Back to Dashboard
               </button>
               <div className="text-center py-4">
-                <div className="inline-flex p-4 rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--border)] mb-4 animate-bounce">
+                <div className="inline-flex p-4 rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--border)] mb-4">
                   <GraduationCap className="w-8 h-8" />
                 </div>
                 <h1 className="text-3xl font-black text-[var(--text)] font-serif tracking-tight">
@@ -3376,7 +3376,7 @@ export default function App() {
                       className="max-w-3xl mx-auto space-y-6"
                     >
                       <div className="text-center py-8">
-                        <div className="inline-flex p-4 rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--border)] mb-4 animate-bounce">
+                        <div className="inline-flex p-4 rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--border)] mb-4">
                           <GraduationCap className="w-8 h-8" />
                         </div>
                         <h1 className="text-3xl font-black text-[var(--text)] font-serif tracking-tight">

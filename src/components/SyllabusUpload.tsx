@@ -697,7 +697,7 @@ export default function SyllabusUpload({
           <div className="flex flex-col items-center justify-center space-y-4 pointer-events-none">
             {/* Upload Icon Circle */}
             <div className="p-4 bg-[#101010] rounded-full border border-[var(--border)] text-[var(--accent)] group-hover:scale-105 group-hover:border-[var(--accent)] transition-all duration-200 shadow-md">
-              <svg width="24" height="24" className="w-6 h-6 animate-bounce shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+              <svg width="24" height="24" className="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
             </div>
             <div>
               <p className="text-sm font-semibold text-[var(--text)] transition-colors">

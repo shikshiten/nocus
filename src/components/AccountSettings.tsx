@@ -435,17 +435,56 @@ export default function AccountSettings({
         <div className="lg:col-span-9 space-y-6">
           
           {/* 1. GENERAL PREFERENCES VIEW */}
-          {(activeTab === "general" || activeTab === "notifications" || activeTab === "privacy") && (
+          {(activeTab === "general" || activeTab === "notifications" || activeTab === "privacy") && (() => {
+            const isTerracottaTheme = themeStyle === "terracotta" || primaryColor === "terracotta";
+            const bannerGradient = (() => {
+              if (themeStyle === "terracotta") {
+                if (primaryColor === "emerald") return "from-[#064E3B] via-[#047857] to-[#059669]";
+                if (primaryColor === "violet") return "from-[#3B0764] via-[#581C87] to-[#7C3AED]";
+                if (primaryColor === "rose") return "from-[#881337] via-[#BE123C] to-[#E11D48]";
+                if (primaryColor === "amber") return "from-[#78350F] via-[#B45309] to-[#D97706]";
+                return "from-[#451205] via-[#7D1F08] to-[#D5360C]";
+              }
+              switch (primaryColor) {
+                case "terracotta":
+                  return "from-[#451205] via-[#7D1F08] to-[#D5360C]";
+                case "emerald":
+                  return "from-[#064E3B] via-[#047857] to-[#059669]";
+                case "violet":
+                  return "from-[#3B0764] via-[#581C87] to-[#7C3AED]";
+                case "rose":
+                  return "from-[#881337] via-[#BE123C] to-[#E11D48]";
+                case "amber":
+                  return "from-[#78350F] via-[#B45309] to-[#D97706]";
+                case "indigo":
+                default:
+                  return "from-[#211E5F] via-[#352DB0] to-[#5143CC]";
+              }
+            })();
+
+            const avatarRingGradient = isTerracottaTheme
+              ? "from-amber-400 via-orange-400 to-[#D5360C]"
+              : primaryColor === "emerald"
+              ? "from-emerald-300 to-teal-400"
+              : primaryColor === "violet"
+              ? "from-purple-300 to-pink-400"
+              : primaryColor === "rose"
+              ? "from-rose-300 to-amber-300"
+              : primaryColor === "amber"
+              ? "from-amber-200 to-orange-400"
+              : "from-teal-300 to-emerald-400";
+
+            return (
             <div className="space-y-6 animate-fade-in">
-              {/* Personalized Header Banner with Profile Information & Actions */}
-              <div className="relative bg-gradient-to-r from-[#211E5F] via-[#352DB0] to-[#5143CC] text-white p-6 rounded-[24px] overflow-hidden shadow-xl shadow-primary-app/10 flex flex-col md:flex-row items-center justify-between gap-6">
+              {/* Personalized Header Banner with Profile Information & Actions matching active theme */}
+              <div className={`relative bg-gradient-to-r ${bannerGradient} text-white p-6 rounded-[24px] overflow-hidden shadow-xl shadow-primary-app/10 flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300`}>
                 <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-white/[0.04] to-transparent pointer-events-none" />
                 
                 {/* Profile Information merged inside */}
                 <div className="flex flex-col sm:flex-row items-center gap-5 flex-1 w-full z-10">
                   {/* User Avatar with Progress Circle Border */}
                   <div className="relative group shrink-0">
-                    <div className="absolute inset-[-4px] rounded-full bg-gradient-to-tr from-teal-300 to-emerald-400 p-[2px] animate-spin-slow opacity-85" />
+                    <div className={`absolute inset-[-4px] rounded-full bg-gradient-to-tr ${avatarRingGradient} p-[2px] animate-spin-slow opacity-85`} />
                     <div className="relative w-18 h-18 rounded-full overflow-hidden border-2 border-white/20 bg-white/10 flex items-center justify-center shadow-lg">
                       {customAvatar ? (
                         <img
@@ -475,7 +514,7 @@ export default function AccountSettings({
                       </button>
                     </div>
                     <div className="absolute bottom-0 right-0 w-5.5 h-5.5 bg-white text-primary-app border border-white/10 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:scale-105 active:scale-95" onClick={() => avatarInputRef.current?.click()}>
-                      <Camera className="w-3 h-3 text-indigo-900" />
+                      <Camera className="w-3 h-3 text-primary-app" />
                     </div>
                   </div>
 
@@ -523,7 +562,7 @@ export default function AccountSettings({
                               setTempName(user?.displayName || guestName);
                               setIsEditingName(true);
                             }}
-                            className="text-[11px] font-bold text-teal-300 hover:text-teal-200 hover:underline cursor-pointer"
+                            className={`text-[11px] font-bold ${isTerracottaTheme ? "text-amber-200 hover:text-white" : "text-teal-300 hover:text-teal-200"} hover:underline cursor-pointer`}
                           >
                             Edit Name
                           </button>
@@ -823,7 +862,7 @@ export default function AccountSettings({
                 </button>
               </div>
             </div>
-          )}
+          ); })()}
 
           {/* ABOUT TAB */}
           {activeTab === "about" && (
