@@ -648,17 +648,17 @@ export default function AccountSettings({
                         }}
                         className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between gap-3 ${
                           themeStyle === "terracotta"
-                            ? "border-[#D5360C] ring-2 ring-[#D5360C]/40 bg-[#101010] shadow-md text-[#E6D5BD]"
+                            ? "border-[#D5360C] ring-2 ring-[#D5360C]/35 bg-card-strong-app shadow-sm"
                             : "border-hairline-soft-app hover:border-hairline-app bg-card-app hover:bg-card-strong-app/20"
                         }`}
                       >
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-ink-app">Terracotta Noir</span>
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#D5360C]/25 text-[#D5360C] font-bold">New Style</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#D5360C]/15 text-[#D5360C] font-bold">Custom</span>
                           </div>
                           {themeStyle === "terracotta" ? (
-                            <div className="w-4.5 h-4.5 rounded-full bg-[#D5360C] text-[#E6D5BD] flex items-center justify-center text-[10px] shadow-xs">
+                            <div className="w-4.5 h-4.5 rounded-full bg-[#D5360C] text-white flex items-center justify-center text-[10px] shadow-xs">
                               <Check className="w-3 h-3" />
                             </div>
                           ) : (
@@ -667,14 +667,14 @@ export default function AccountSettings({
                         </div>
 
                         <p className="text-[10px] text-muted-app leading-relaxed">
-                          Terracotta background canvas with deep onyx elements & parchment text.
+                          Warm terracotta aesthetic with refined parchment tones & deep contrast.
                         </p>
 
                         <div className="flex items-center justify-between pt-1 border-t border-hairline-soft-app">
                           <div className="flex items-center gap-1.5 text-[9px] text-muted-soft-app font-mono">
-                            <span className="w-3.5 h-3.5 rounded-full bg-[#D5360C] border border-white/20 inline-block" title="Background: #D5360C" />
-                            <span className="w-3.5 h-3.5 rounded-full bg-[#101010] border border-white/20 inline-block" title="Element: #101010" />
-                            <span className="w-3.5 h-3.5 rounded-full bg-[#E6D5BD] border border-black/20 inline-block" title="Text: #E6D5BD" />
+                            <span className="w-3.5 h-3.5 rounded-full bg-[#D5360C] border border-white/20 inline-block" title="Accent: #D5360C" />
+                            <span className="w-3.5 h-3.5 rounded-full bg-[#E6D5BD] dark:bg-[#181818] border border-hairline-app inline-block" title="Surface: Parchment" />
+                            <span className="w-3.5 h-3.5 rounded-full bg-[#101010] dark:bg-[#E6D5BD] border border-hairline-app inline-block" title="Text" />
                           </div>
                           <span className="text-[9px] font-mono font-bold text-[#D5360C]">#D5360C</span>
                         </div>
@@ -842,6 +842,49 @@ export default function AccountSettings({
                 </div>
                 <h3 className="text-base font-bold text-ink-app tracking-tight mt-1">Smart Syllabus Tracker & Student Workspace</h3>
                 <p className="text-[11px] text-muted-soft-app mt-0.5 font-bold uppercase tracking-widest font-mono">Designed for Focus & Academic Mastery</p>
+              </div>
+
+              {/* Logged-in Student Account / Profile Section */}
+              <div className="p-5 bg-card-strong-app/30 rounded-2xl border border-hairline-soft-app space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary-soft-app text-primary-app flex items-center justify-center font-bold text-sm overflow-hidden shrink-0 border border-hairline-soft-app">
+                      {customAvatar ? (
+                        <img src={customAvatar} alt="Profile" className="w-full h-full object-cover" />
+                      ) : user?.user_metadata?.avatar_url ? (
+                        <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        (user?.user_metadata?.full_name || user?.fullName || guestName || "S").charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-bold text-muted-soft-app uppercase tracking-wider font-mono">
+                        {user ? "Student Account Profile" : "Guest Scholar Profile"}
+                      </div>
+                      <div className="text-sm font-bold text-ink-app">
+                        {user?.user_metadata?.full_name || user?.fullName || guestName || "Scholar"}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full self-start sm:self-auto ${user ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30" : "bg-amber-500/15 text-amber-500 border border-amber-500/30"}`}>
+                    {user ? "● Verified Scholar" : "○ Guest Mode (Offline)"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-hairline-soft-app text-[11px]">
+                  <div className="p-3 bg-card-app/60 rounded-xl border border-hairline-soft-app">
+                    <span className="text-[9px] text-muted-soft-app uppercase tracking-widest font-mono block">Registered Email</span>
+                    <span className="font-semibold text-ink-app break-all mt-0.5 block">{user?.email || "Offline Local Session"}</span>
+                  </div>
+                  <div className="p-3 bg-card-app/60 rounded-xl border border-hairline-soft-app">
+                    <span className="text-[9px] text-muted-soft-app uppercase tracking-widest font-mono block">Account Status</span>
+                    <span className="font-semibold text-ink-app mt-0.5 block">{user ? "Active Cloud Synchronized" : "Local Workspace"}</span>
+                  </div>
+                  <div className="p-3 bg-card-app/60 rounded-xl border border-hairline-soft-app sm:col-span-2">
+                    <span className="text-[9px] text-muted-soft-app uppercase tracking-widest font-mono block">Scholar Identity Key</span>
+                    <span className="font-mono text-[10px] text-muted-app select-all mt-0.5 block">{user?.id ? `nocus_usr_${user.id.slice(0, 16)}...` : "nocus_guest_offline"}</span>
+                  </div>
+                </div>
               </div>
 
               {/* App Overview Cards */}

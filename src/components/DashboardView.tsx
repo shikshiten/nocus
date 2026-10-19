@@ -126,8 +126,8 @@ export default function DashboardView({
   onDeleteSyllabus
 }: DashboardViewProps) {
   const displayName = user
-    ? user.displayName?.split(" ")[0] || "Learner"
-    : guestName.split(" ")[0] || "Anurag";
+    ? user.displayName?.split(" ")[0] || "Scholar"
+    : guestName.split(" ")[0] || "Scholar";
 
   const [currentTime, setCurrentTime] = React.useState(() => new Date());
   const [showDropdown, setShowDropdown] = React.useState(false);
@@ -475,6 +475,19 @@ export default function DashboardView({
           bgFilled: "bg-amber-500 dark:bg-amber-550",
           bgFilledHover: "hover:bg-amber-600 dark:hover:bg-amber-500"
         };
+      case "terracotta":
+        return {
+          bgGradient: "from-[#D5360C] to-[#F97316]",
+          text: "text-[#D5360C] dark:text-[#FB923C]",
+          bgLight: "bg-[#D5360C]/10 dark:bg-[#D5360C]/20",
+          border: "border-[#D5360C]/20 dark:border-[#D5360C]/35",
+          borderHover: "hover:border-[#D5360C]/50",
+          accentRing: "ring-[#D5360C]/25",
+          badgeBg: "bg-[#D5360C]/15 text-[#D5360C] dark:bg-[#D5360C]/25 dark:text-[#FDBA74]",
+          hex: "#D5360C",
+          bgFilled: "bg-[#D5360C]",
+          bgFilledHover: "hover:bg-[#B82E0A]"
+        };
       case "indigo":
       default:
         return {
@@ -673,6 +686,48 @@ export default function DashboardView({
           blurBg: "bg-amber-600/20",
           cardBg: "bg-gradient-to-br from-white via-amber-50/20 to-orange-50/30 dark:from-[#18100c] dark:to-[#2d150d]",
           cardBorder: "border-amber-200 dark:border-amber-500/30",
+        },
+      },
+      terracotta: {
+        completed: {
+          progressColor: "bg-[#D5360C] dark:bg-[#EA580C]",
+          pulseColor: "bg-[#D5360C]",
+          iconBg: "bg-orange-50 dark:bg-orange-950/40 border border-[#D5360C]/20 text-[#D5360C] dark:text-[#FB923C]",
+          bottomBar: "bg-[#D5360C] dark:bg-[#EA580C]",
+          overlayGrad: "from-[#D5360C]/[0.05] to-transparent",
+          blurBg: "bg-[#D5360C]/15",
+          cardBg: "bg-gradient-to-br from-white to-orange-50/40 dark:from-[#180e0a] dark:to-[#28130a]",
+          cardBorder: "border-[#D5360C]/20 dark:border-[#D5360C]/30",
+        },
+        "in-progress": {
+          progressColor: "bg-[#F97316] dark:bg-[#FB923C]",
+          pulseColor: "bg-[#F97316]",
+          iconBg: "bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/20 text-[#D5360C] dark:text-[#FDBA74]",
+          bottomBar: "bg-[#F97316] dark:bg-[#EA580C]",
+          overlayGrad: "from-[#F97316]/[0.04] to-transparent",
+          blurBg: "bg-[#F97316]/15",
+          cardBg: "bg-gradient-to-br from-white to-amber-50/40 dark:from-[#160d08] dark:to-[#22120a]",
+          cardBorder: "border-[#F97316]/20 dark:border-[#F97316]/25",
+        },
+        pending: {
+          progressColor: "bg-stone-300 dark:bg-stone-700",
+          pulseColor: "bg-stone-400",
+          iconBg: "bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-stone-400 dark:text-stone-500",
+          bottomBar: "bg-stone-200 dark:bg-stone-800",
+          overlayGrad: "from-[#D5360C]/[0.02] to-transparent",
+          blurBg: "bg-[#D5360C]/10",
+          cardBg: "bg-gradient-to-br from-white to-stone-50/40 dark:from-[#120c0a] dark:to-[#1a120e]",
+          cardBorder: "border-stone-200/90 dark:border-stone-800/80",
+        },
+        total: {
+          progressColor: "bg-gradient-to-r from-[#D5360C] to-[#F97316]",
+          pulseColor: "bg-[#D5360C]",
+          iconBg: "bg-orange-100 dark:bg-orange-950/50 border border-[#D5360C]/30 text-[#D5360C] dark:text-[#FDBA74]",
+          bottomBar: "bg-gradient-to-r from-[#D5360C] to-[#F97316]",
+          overlayGrad: "from-[#D5360C]/[0.08] to-transparent",
+          blurBg: "bg-[#D5360C]/20",
+          cardBg: "bg-gradient-to-br from-white via-orange-50/20 to-amber-50/30 dark:from-[#1a0e0a] dark:to-[#2c1308]",
+          cardBorder: "border-[#D5360C]/30 dark:border-[#D5360C]/40",
         },
       },
       indigo: {

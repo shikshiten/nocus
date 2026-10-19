@@ -92,8 +92,11 @@ export default function App() {
         ...clerkUser,
         id: clerkUser.id,
         email: clerkUser.primaryEmailAddress?.emailAddress || "",
+        displayName: clerkUser.fullName || clerkUser.firstName || clerkUser.username || "Scholar",
+        fullName: clerkUser.fullName || clerkUser.firstName || "Scholar",
+        createdAt: clerkUser.createdAt ? new Date(clerkUser.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "Active Semester",
         user_metadata: {
-          full_name: clerkUser.fullName || clerkUser.firstName || "",
+          full_name: clerkUser.fullName || clerkUser.firstName || "Scholar",
           avatar_url: clerkUser.imageUrl || "",
         },
       }
@@ -684,6 +687,7 @@ export default function App() {
   const notificationsRef = React.useRef<HTMLDivElement>(null);
   const activityDropdownRef = React.useRef<HTMLDivElement>(null);
   const headerDropdownRef = React.useRef<HTMLDivElement>(null);
+  const mobileHeaderDropdownRef = React.useRef<HTMLDivElement>(null);
 
   // Splash & Welcome Tour States
   const [showSplash, setShowSplash] = useState(false);
@@ -719,7 +723,7 @@ export default function App() {
       if (!target) return;
 
       const clickedInsideNotifications = notificationsRef.current?.contains(target);
-      const clickedInsideHeaderDropdown = headerDropdownRef.current?.contains(target);
+      const clickedInsideHeaderDropdown = headerDropdownRef.current?.contains(target) || mobileHeaderDropdownRef.current?.contains(target);
       const clickedInsideActivityDropdown = activityDropdownRef.current?.contains(target);
 
       if (event.type === "scroll") {
@@ -983,6 +987,7 @@ export default function App() {
     if (config?.hex) {
       document.documentElement.style.setProperty("--primary", config.hex);
       document.documentElement.style.setProperty("--accent", config.hex);
+      document.documentElement.style.setProperty("--primary-hover", config.hex === "#D5360C" ? "#B82E0A" : `${config.hex}dd`);
       document.documentElement.style.setProperty("--primary-soft", `${config.hex}22`);
       document.documentElement.style.setProperty("--accent-soft", `${config.hex}18`);
       document.documentElement.style.setProperty("--accent-glow", `${config.hex}40`);
@@ -2007,6 +2012,19 @@ export default function App() {
           bgLightHover: "hover:bg-amber-100 dark:hover:bg-amber-900/45",
           textLight: "text-amber-700 dark:text-amber-400"
         };
+      case "terracotta":
+        return {
+          bg: "bg-[#D5360C] dark:bg-[#EA580C]",
+          bgHover: "hover:bg-[#B82E0A] dark:hover:bg-[#C2410C]",
+          border: "border-[#D5360C] dark:border-[#EA580C]",
+          text: "text-[#D5360C] dark:text-[#FB923C]",
+          bgLight: "bg-[#D5360C]/10 dark:bg-[#D5360C]/20",
+          borderLight: "border-[#D5360C]/25",
+          textHover: "hover:text-[#B82E0A]",
+          ring: "focus:ring-[#D5360C]",
+          bgLightHover: "hover:bg-[#D5360C]/15 dark:hover:bg-[#D5360C]/30",
+          textLight: "text-[#D5360C] dark:text-[#FB923C]"
+        };
       case "indigo":
       default:
         return {
@@ -2697,119 +2715,136 @@ export default function App() {
 
       {/* 3. Main Content Container */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen lg:pl-60">
-        {/* Top Header Row (Navbar) */}
-        <header className="sticky top-0 z-30 h-16 bg-[var(--bg)] border-b border-[var(--border)] px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4 relative transition-colors duration-200">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0" ref={headerDropdownRef}>
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl border border-hairline-app text-muted-app hover:bg-card-app cursor-pointer"
-            >
-              <Menu className="w-4.5 h-4.5" />
-            </button>
+        {/* Top Header Row (Navbar) - Responsive 2 Rows on Mobile, 1 Row on Desktop */}
+        <header className="sticky top-0 z-30 bg-[var(--bg)] border-b border-[var(--border)] px-3 sm:px-6 lg:px-8 py-2.5 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4 relative transition-colors duration-200">
+          {/* Row 1 on Mobile / Full Header Container on Desktop */}
+          <div className="flex items-center justify-between gap-2 sm:gap-4 w-full sm:w-auto flex-1 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-xl border border-hairline-app text-muted-app hover:bg-card-app cursor-pointer shrink-0"
+                aria-label="Open menu"
+              >
+                <Menu className="w-4.5 h-4.5" />
+              </button>
 
-            {/* Global Subject Switcher Dropdown in Top Header - Isolated and Visible Everywhere */}
-            {currentSyllabus && (
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setHeaderDropdownOpen(!headerDropdownOpen);
-                  }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-card-app/90 hover:bg-card-strong-app/90 border border-hairline-app rounded-full text-xs font-bold transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${headerDropdownOpen ? `ring-2 ${theme.ring} ${theme.borderPrimary}` : ""
-                    }`}
-                  title={syllabuses.length > 1 ? "Switch Active Subject" : "Subject Workspace"}
-                >
-                  <div className="max-w-[120px] sm:max-w-[140px] overflow-hidden whitespace-nowrap text-ink-app font-sans relative flex items-center">
-                    <div className="animate-marquee hover:[animation-play-state:paused] flex gap-4 pr-4 shrink-0">
-                      <span>{currentSyllabus.subjectName}</span>
-                      <span>{currentSyllabus.subjectName}</span>
-                    </div>
-                  </div>
-
-                  {/* Indicator showing subjects can be switched */}
-                  <div className="flex items-center gap-0.5 ml-0.5 shrink-0">
-                    <ChevronDown className={`w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform duration-200 ${headerDropdownOpen ? "rotate-180" : ""}`} />
-                  </div>
-                </button>
-
-                {/* Dropdown Menu */}
-                {headerDropdownOpen && (
-                  <div className="absolute left-0 mt-2.5 w-64 bg-surface-app border border-hairline-app rounded-2xl shadow-2xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <div className="px-3.5 py-2 border-b border-hairline-soft-app flex items-center justify-between">
-                      <p className="text-[10px] font-extrabold text-muted-soft-app uppercase tracking-wider">
-                        Select Subject
-                      </p>
-                      <span className={`text-[9px] font-bold ${theme.badge} px-2 py-0.5 rounded-full`}>
-                        {syllabuses.length} {syllabuses.length === 1 ? "Subject" : "Subjects"}
-                      </span>
-                    </div>
-                    <div className="max-h-56 overflow-y-auto py-1 scrollbar-thin">
-                      {syllabuses.map((s) => {
-                        const isSelected = s.id === currentSyllabus.id;
-                        const sTopics = s.units?.flatMap(u => u.topics) || [];
-                        const sCompleted = sTopics.filter(t => t.completed).length;
-                        const sPct = sTopics.length > 0 ? Math.round((sCompleted / sTopics.length) * 100) : 0;
-
-                        return (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => {
-                              setCurrentSyllabus(s);
-                              localStorage.setItem("activeSyllabusId", s.id);
-                              setHeaderDropdownOpen(false);
-                              addNotification(
-                                "Subject Changed! 🔄",
-                                `Switched active subject to "${s.subjectName}".`,
-                                "info"
-                              );
-                            }}
-                            className={`w-full text-left px-3.5 py-2 hover:bg-card-app/60 flex items-center justify-between gap-3 transition-colors cursor-pointer ${isSelected ? "bg-card-app/30" : ""
-                              }`}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className={`text-xs font-bold truncate ${isSelected ? `${theme.text}` : "text-ink-app"
-                                }`}>
-                                {s.subjectName}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <div className="flex-1 h-1 bg-card-app rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full bg-gradient-to-r ${theme.gradient}`}
-                                    style={{ width: `${sPct}%` }}
-                                  />
-                                </div>
-                                <span className="text-[9px] font-medium text-muted-app">{sPct}% done</span>
-                              </div>
-                            </div>
-                            {isSelected && (
-                              <Check className={`w-3.5 h-3.5 ${theme.text} shrink-0`} />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Dropdown Bottom Option: + Add New Subject */}
-                    <div className="p-1.5 border-t border-hairline-soft-app bg-card-app/30">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setHeaderDropdownOpen(false);
-                          setIsAddingCourse(true);
-                        }}
-                        className="w-full py-1.5 px-3 text-xs font-bold text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add New Subject</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
+              {/* Mobile Branding (Row 1 Left) */}
+              <div
+                className="flex sm:hidden items-center gap-2 cursor-pointer select-none"
+                onClick={() => setActiveSidebarTab("dashboard")}
+              >
+                <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0">
+                  <img src="/nocus-logo.png" alt="nocus logo" className="w-full h-full object-contain" />
+                </div>
+                <div className="flex items-baseline gap-1 leading-none">
+                  <span className="font-sans text-base font-black tracking-tight text-ink-app">nocus</span>
+                  <span className="text-[8px] font-extrabold uppercase tracking-widest text-primary-app font-mono">beta</span>
+                </div>
               </div>
-            )}
-          </div>
 
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+              {/* Desktop Global Subject Switcher Dropdown in Top Header (Hidden on Mobile) */}
+              {currentSyllabus && (
+                <div className="hidden sm:block relative" ref={headerDropdownRef}>
+                  <button
+                    onClick={() => {
+                      setHeaderDropdownOpen(!headerDropdownOpen);
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-card-app/90 hover:bg-card-strong-app/90 border border-hairline-app rounded-full text-xs font-bold transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${headerDropdownOpen ? `ring-2 ${theme.ring} ${theme.borderPrimary}` : ""
+                      }`}
+                    title={syllabuses.length > 1 ? "Switch Active Subject" : "Subject Workspace"}
+                  >
+                    <div className="max-w-[120px] sm:max-w-[180px] lg:max-w-[220px] overflow-hidden whitespace-nowrap text-ink-app font-sans relative flex items-center">
+                      <div className="animate-marquee hover:[animation-play-state:paused] flex gap-4 pr-4 shrink-0">
+                        <span>{currentSyllabus.subjectName}</span>
+                        <span>{currentSyllabus.subjectName}</span>
+                      </div>
+                    </div>
+
+                    {/* Indicator showing subjects can be switched */}
+                    <div className="flex items-center gap-0.5 ml-0.5 shrink-0">
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform duration-200 ${headerDropdownOpen ? "rotate-180" : ""}`} />
+                    </div>
+                  </button>
+
+                  {/* Dropdown Menu Desktop */}
+                  {headerDropdownOpen && (
+                    <div className="absolute left-0 mt-2.5 w-64 bg-surface-app border border-hairline-app rounded-2xl shadow-2xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <div className="px-3.5 py-2 border-b border-hairline-soft-app flex items-center justify-between">
+                        <p className="text-[10px] font-extrabold text-muted-soft-app uppercase tracking-wider">
+                          Select Subject
+                        </p>
+                        <span className={`text-[9px] font-bold ${theme.badge} px-2 py-0.5 rounded-full`}>
+                          {syllabuses.length} {syllabuses.length === 1 ? "Subject" : "Subjects"}
+                        </span>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto py-1 scrollbar-thin">
+                        {syllabuses.map((s) => {
+                          const isSelected = s.id === currentSyllabus.id;
+                          const sTopics = s.units?.flatMap(u => u.topics) || [];
+                          const sCompleted = sTopics.filter(t => t.completed).length;
+                          const sPct = sTopics.length > 0 ? Math.round((sCompleted / sTopics.length) * 100) : 0;
+
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                setCurrentSyllabus(s);
+                                localStorage.setItem("activeSyllabusId", s.id);
+                                setHeaderDropdownOpen(false);
+                                addNotification(
+                                  "Subject Changed! 🔄",
+                                  `Switched active subject to "${s.subjectName}".`,
+                                  "info"
+                                );
+                              }}
+                              className={`w-full text-left px-3.5 py-2 hover:bg-card-app/60 flex items-center justify-between gap-3 transition-colors cursor-pointer ${isSelected ? "bg-card-app/30" : ""
+                                }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className={`text-xs font-bold truncate ${isSelected ? `${theme.text}` : "text-ink-app"
+                                  }`}>
+                                  {s.subjectName}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <div className="flex-1 h-1 bg-card-app rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full bg-gradient-to-r ${theme.gradient}`}
+                                      style={{ width: `${sPct}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[9px] font-medium text-muted-app">{sPct}% done</span>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <Check className={`w-3.5 h-3.5 ${theme.text} shrink-0`} />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Dropdown Bottom Option: + Add New Subject */}
+                      <div className="p-1.5 border-t border-hairline-soft-app bg-card-app/30">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHeaderDropdownOpen(false);
+                            setIsAddingCourse(true);
+                          }}
+                          className="w-full py-1.5 px-3 text-xs font-bold text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add New Subject</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {/* Parsing/Processing Syllabus Indicator */}
             {uploadState.loading && (
               <span className="text-[11px] font-bold text-violet-500 dark:text-violet-400 flex items-center justify-center bg-violet-500/10 dark:bg-violet-500/20 p-2 rounded-xl border border-violet-500/15 select-none" title="Processing Syllabus...">
@@ -3076,7 +3111,7 @@ export default function App() {
                       <Camera className="w-3 h-3 text-white" />
                     </div>
                   </button>
-                  <span className="hidden sm:inline text-xs font-bold text-slate-700 dark:text-slate-350">{user.user_metadata?.full_name || "Learner"}</span>
+                  <span className="hidden sm:inline text-xs font-bold text-slate-700 dark:text-slate-350">{user.user_metadata?.full_name || "Scholar"}</span>
                 </div>
               ) : (
                 <button
@@ -3089,10 +3124,111 @@ export default function App() {
               )}
             </div>
           </div>
+        </div>
+
+          {/* Row 2 on Mobile (when currentSyllabus exists): Full-Width Dedicated Subject Selector */}
+          {currentSyllabus && (
+            <div className="sm:hidden w-full relative" ref={mobileHeaderDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setHeaderDropdownOpen(!headerDropdownOpen)}
+                className={`w-full flex items-center justify-between px-3.5 py-2 bg-card-app/95 hover:bg-card-strong-app border border-hairline-app rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                  headerDropdownOpen ? `ring-2 ${theme.ring} ${theme.borderPrimary}` : ""
+                }`}
+                title="Switch Active Subject"
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="w-5 h-5 rounded-md bg-primary-soft-app text-primary-app flex items-center justify-center text-[10px] shrink-0 font-bold">
+                    📚
+                  </div>
+                  <span className="truncate text-ink-app font-sans text-xs font-bold text-left">
+                    {currentSyllabus.subjectName}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <span className="text-[10px] font-mono text-muted-app font-normal">
+                    {syllabuses.length > 1 ? "Switch" : "Subject"}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-muted-app transition-transform duration-200 ${headerDropdownOpen ? "rotate-180" : ""}`} />
+                </div>
+              </button>
+
+              {/* Mobile Subject Dropdown Menu */}
+              {headerDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full mt-2 w-full bg-surface-app border border-hairline-app rounded-2xl shadow-2xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3.5 py-2 border-b border-hairline-soft-app flex items-center justify-between">
+                    <p className="text-[10px] font-extrabold text-muted-soft-app uppercase tracking-wider">
+                      Select Subject
+                    </p>
+                    <span className={`text-[9px] font-bold ${theme.badge} px-2 py-0.5 rounded-full`}>
+                      {syllabuses.length} {syllabuses.length === 1 ? "Subject" : "Subjects"}
+                    </span>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto py-1 scrollbar-thin">
+                    {syllabuses.map((s) => {
+                      const isSelected = s.id === currentSyllabus.id;
+                      const sTopics = s.units?.flatMap((u) => u.topics) || [];
+                      const sCompleted = sTopics.filter((t) => t.completed).length;
+                      const sPct = sTopics.length > 0 ? Math.round((sCompleted / sTopics.length) * 100) : 0;
+
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            setCurrentSyllabus(s);
+                            localStorage.setItem("activeSyllabusId", s.id);
+                            setHeaderDropdownOpen(false);
+                            addNotification(
+                              "Subject Changed! 🔄",
+                              `Switched active subject to "${s.subjectName}".`,
+                              "info"
+                            );
+                          }}
+                          className={`w-full text-left px-3.5 py-2.5 hover:bg-card-app/60 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                            isSelected ? "bg-card-app/30" : ""
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-xs font-bold truncate ${isSelected ? `${theme.text}` : "text-ink-app"}`}>
+                              {s.subjectName}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="flex-1 h-1 bg-card-app rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full bg-gradient-to-r ${theme.gradient}`}
+                                  style={{ width: `${sPct}%` }}
+                                />
+                              </div>
+                              <span className="text-[9px] font-medium text-muted-app">{sPct}% done</span>
+                            </div>
+                          </div>
+                          {isSelected && <Check className={`w-3.5 h-3.5 ${theme.text} shrink-0`} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="p-1.5 border-t border-hairline-soft-app bg-card-app/30">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHeaderDropdownOpen(false);
+                        setIsAddingCourse(true);
+                      }}
+                      className="w-full py-1.5 px-3 text-xs font-bold text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add New Subject</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </header>
 
         {/* Dynamic View Main Box */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto pb-24 lg:pb-8">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto pb-32 sm:pb-28 lg:pb-8">
           {isAddingCourse ? (
             <div className="max-w-3xl mx-auto space-y-6">
               <button
