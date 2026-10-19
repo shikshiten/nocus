@@ -30,7 +30,8 @@ import {
   StaggerItem,
   MOTION_CONFIG,
 } from "./motion";
-import GlassFolder from "./ui/glass-folder-cards";
+import TiltedGridHero from "./ui/tilted-grid-hero";
+import { SCHOLAR_IMAGES } from "./ui/tilted-grid-hero-demo";
 
 export default function LandingPage() {
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -680,76 +681,46 @@ export default function LandingPage() {
             })}
           </StaggerGroup>
 
-          {/* Interactive Glass Folder Study Vault Showcase */}
+          {/* 3D Tilted Curved Stream Showcase */}
           <Reveal delay={0.12}>
             <div className="pt-8 sm:pt-14 space-y-6">
               <div className="text-center max-w-xl mx-auto space-y-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 font-mono">
-                  LIVE INTERACTIVE VAULT PREVIEW
+                  LIVE IMMERSIVE VAULT STREAM
                 </span>
                 <h3 className="text-xl sm:text-3xl font-black text-white tracking-tight">
-                  Organize study materials like physical folders
+                  Organize study materials in dynamic 3D flow
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-medium">
-                  Frosted glass folders that lean on hover, fan out lecture sheets, and let you inspect study files with fluid physics.
+                  Course notes, formula books, and syllabus modules streaming along a fluid cylinder curve.
                 </p>
               </div>
 
-              <div className="relative flex w-full flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-white/[0.04] to-transparent p-4 sm:p-8 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-sm">
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 text-white opacity-[0.06]"
-                  style={{
-                    backgroundImage: "radial-gradient(currentColor 1.1px, transparent 1.4px)",
-                    backgroundSize: "22px 22px",
-                  }}
-                />
-                <div className="relative grid max-w-[1180px] w-full grid-cols-1 items-end justify-items-center gap-x-10 gap-y-12 md:grid-cols-2 xl:grid-cols-3 z-10">
-                  <GlassFolder
-                    label="Computer Networks"
-                    art="aurora"
-                    seed={3}
-                    appearDelay={0}
-                    files={[
-                      { name: "Unit 2: Transport Protocols.pdf", meta: "PDF · 2.4 MB" },
-                      { name: "Subnetting Cheat Sheet", meta: "PNG · 1.8 MB", art: "ember" },
-                      { name: "Midterm Revision Notes.pdf", meta: "PDF · 940 KB" },
-                    ]}
-                  />
-                  <GlassFolder
-                    label="Course Vault"
-                    art="none"
-                    action="more"
-                    labelPlacement="top-left"
-                    appearDelay={140}
-                    files={[
-                      { name: "Calculus Formula Book", meta: "PDF · 3.1 MB", art: "dusk" },
-                      { name: "Assignment 4 Solutions", meta: "PDF · 820 KB" },
-                      { name: "Lab Manual & Code", meta: "ZIP · 4.2 MB", art: "ember" },
-                      { name: "Course Syllabus 2026.pdf", meta: "PDF · 410 KB" },
-                    ]}
-                    menu={[{ label: "Rename Folder" }, { label: "Export All PDFs" }, { label: "Move to Trash", danger: true }]}
-                  />
-                  <GlassFolder
-                    label="Study Archives"
-                    meta="Updated Today"
-                    tone="dark"
-                    art="ember"
-                    seed={11}
-                    action="add"
-                    labelPlacement="top-right"
-                    appearDelay={280}
-                    files={[
-                      { name: "Previous Year Questions", meta: "28 items", art: "verdant" },
-                      { name: "Viva Preparation Guide", meta: "PDF · 1.2 MB" },
-                      { name: "Mind Maps & Diagrams", meta: "IMG · 8.4 MB", art: "glacier" },
-                    ]}
-                  />
+              <TiltedGridHero
+                images={SCHOLAR_IMAGES}
+                speed={3.6}
+                tileHeight={isMobile ? 32 : 28}
+                aspectRatio={16 / 9}
+                curve={isMobile ? 65 : 80}
+                fade={isMobile ? 10 : 14}
+                className="h-[380px] sm:h-[480px] w-full rounded-3xl border border-white/10 bg-[#070913] shadow-2xl"
+              >
+                <div className="relative z-10 flex h-full flex-col items-center justify-between py-8 sm:py-12 text-center pointer-events-none select-none">
+                  <div className="px-4 space-y-2 max-w-xl">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 backdrop-blur-md">
+                      ✨ Seamless Cylinder Stream
+                    </span>
+                    <h4 className="text-2xl sm:text-4xl font-black tracking-tight text-white drop-shadow-lg">
+                      Every course file, always in focus
+                    </h4>
+                  </div>
+                  <div className="px-4 max-w-md">
+                    <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed drop-shadow bg-[#070913]/70 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
+                      Store syllabus PDFs, lecture slides, and formula sheets directly in your browser. Fully searchable, offline-ready, and synced across devices.
+                    </p>
+                  </div>
                 </div>
-                <p className="relative mt-8 font-mono text-[10px] sm:text-[11px] tracking-[0.18em] text-slate-400 uppercase text-center select-none z-10">
-                  Hover to lean · Tap or click to open · + to add notes
-                </p>
-              </div>
+              </TiltedGridHero>
             </div>
           </Reveal>
         </div>
