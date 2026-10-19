@@ -1,7 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { SignIn, SignUp } from "@clerk/react";
 import { dark } from "@clerk/themes";
-import { motion } from "motion/react";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useReducedMotion,
+  useSpring,
+  AnimatePresence,
+} from "motion/react";
 import {
   Sparkles,
   Timer,
@@ -14,12 +21,102 @@ import {
   GraduationCap,
   CheckCircle2,
   ChevronDown,
-  Compass
 } from "lucide-react";
+import {
+  ScrollProgressBar,
+  Reveal,
+  StaggerGroup,
+  StaggerItem,
+  MOTION_CONFIG,
+} from "./motion";
 
 export default function LandingPage() {
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  const shouldReduceMotion = useReducedMotion();
+
+  // Screen size listener for responsive parallax & 3D tilt
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Global scroll listener for sticky header elevation & scroll hint fade
+  const { scrollY } = useScroll();
+  useEffect(() => {
+    return scrollY.on("change", (latest) => {
+      setIsScrolled(latest > 20);
+    });
+  }, [scrollY]);
+
+  const hintOpacity = useTransform(scrollY, [0, 80], [1, 0]);
+
+  // Hero section scroll parallax
+  const heroRef = useRef<HTMLElement>(null);
+  const { scrollYProgress: heroProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+
+  const heroTextY = useTransform(
+    heroProgress,
+    [0, 1],
+    [0, isMobile ? MOTION_CONFIG.heroParallaxMobileY : MOTION_CONFIG.heroParallaxDesktopY]
+  );
+  const heroTextOpacity = useTransform(
+    heroProgress,
+    [0, 0.85, 1],
+    [1, 0.7, MOTION_CONFIG.heroParallaxOpacityEnd]
+  );
+
+  // Soft decorative background glow blobs with depth parallax
+  const blob1Y = useTransform(
+    heroProgress,
+    [0, 1],
+    [0, isMobile ? MOTION_CONFIG.blobParallaxMobileY[0] : MOTION_CONFIG.blobParallaxDesktopY[0]]
+  );
+  const blob2Y = useTransform(
+    heroProgress,
+    [0, 1],
+    [0, isMobile ? MOTION_CONFIG.blobParallaxMobileY[1] : MOTION_CONFIG.blobParallaxDesktopY[1]]
+  );
+  const blob3Y = useTransform(
+    heroProgress,
+    [0, 1],
+    [0, isMobile ? MOTION_CONFIG.blobParallaxMobileY[2] : MOTION_CONFIG.blobParallaxDesktopY[2]]
+  );
+
+  // App Mockup Preview scroll-linked scale & 3D tilt
+  const previewRef = useRef<HTMLElement>(null);
+  const { scrollYProgress: previewProgress } = useScroll({
+    target: previewRef,
+    offset: ["start end", "center center"],
+  });
+
+  const previewScale = useTransform(
+    previewProgress,
+    [0, 1],
+    [MOTION_CONFIG.previewScaleStart, 1]
+  );
+  const previewRotateX = useTransform(
+    previewProgress,
+    [0, 1],
+    [isMobile ? 0 : MOTION_CONFIG.previewTiltDeg, 0]
+  );
+  const previewGlowOpacity = useTransform(previewProgress, [0, 1], [0.15, 0.55]);
+
+  // How it works section scroll-linked line progress
+  const howRef = useRef<HTMLElement>(null);
+  const { scrollYProgress: howProgress } = useScroll({
+    target: howRef,
+    offset: ["start 80%", "end 60%"],
+  });
+  const howLineScale = useSpring(howProgress, { stiffness: 180, damping: 26 });
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -37,72 +134,93 @@ export default function LandingPage() {
       icon: Sparkles,
       color: "from-amber-500 to-orange-500",
       title: "AI Syllabus Extraction",
-      desc: "Drop your syllabus PDF and let intelligent AI extract chapters, units, and learning goals into clean, actionable checkboxes automatically."
+      desc: "Drop your syllabus PDF and let intelligent AI extract chapters, units, and learning goals into clean, actionable checkboxes automatically.",
     },
     {
       icon: Timer,
       color: "from-violet-500 to-purple-500",
       title: "Deep Work Focus Timers",
-      desc: "Built-in customizable Pomodoro timers eliminate digital distractions and keep your brain in the optimal flow state during revision sessions."
+      desc: "Built-in customizable Pomodoro timers eliminate digital distractions and keep your brain in the optimal flow state during revision sessions.",
     },
     {
       icon: Flame,
       color: "from-rose-500 to-pink-500",
       title: "Daily Streak Habit Engine",
-      desc: "Track daily study consistency with dynamic streak visualizers and weekly momentum dots that make studying every day rewarding."
+      desc: "Track daily study consistency with dynamic streak visualizers and weekly momentum dots that make studying every day rewarding.",
     },
     {
       icon: FolderArchive,
       color: "from-indigo-500 to-blue-500",
       title: "Integrated Study Vault",
-      desc: "Organize up to 7 essential course PDFs and lecture slides directly in your browser with lightning-fast in-app document preview."
+      desc: "Organize up to 7 essential course PDFs and lecture slides directly in your browser with lightning-fast in-app document preview.",
     },
     {
       icon: Target,
       color: "from-emerald-500 to-teal-500",
       title: "Exam Timeline & Deadlines",
-      desc: "Set exam targets and let Nocus automatically calculate overdue and pending topics so you always know what to study next."
+      desc: "Set exam targets and let Nocus automatically calculate overdue and pending topics so you always know what to study next.",
     },
     {
       icon: ShieldCheck,
       color: "from-cyan-500 to-blue-500",
       title: "Offline-First & Private",
-      desc: "Study privately in your browser. When signed in, all your checklists and notes sync seamlessly across your devices."
-    }
+      desc: "Study privately in your browser. When signed in, all your checklists and notes sync seamlessly across your devices.",
+    },
   ];
 
   const faqs = [
     {
       q: "What is Nocus and how does it help students?",
-      a: "Nocus is an all-in-one distraction-free study workspace designed specifically for students. Instead of juggling multiple apps for notes, checklists, timers, and syllabus documents, Nocus unifies everything into one seamless, fast dashboard."
+      a: "Nocus is an all-in-one distraction-free study workspace designed specifically for students. Instead of juggling multiple apps for notes, checklists, timers, and syllabus documents, Nocus unifies everything into one seamless, fast dashboard.",
     },
     {
       q: "Can I use Nocus completely free?",
-      a: "Yes! Nocus is 100% free to use. Create a free Scholar account to sync your study progress across your laptop and phone."
+      a: "Yes! Nocus is 100% free to use. Create a free Scholar account to sync your study progress across your laptop and phone.",
     },
     {
       q: "How does the AI syllabus parser work?",
-      a: "Upload any syllabus PDF or copy-paste course text. Our AI analyzes the document structure, separates courses into modules or chapters, and outputs structured checklists with difficulty badges and progress markers."
+      a: "Upload any syllabus PDF or copy-paste course text. Our AI analyzes the document structure, separates courses into modules or chapters, and outputs structured checklists with difficulty badges and progress markers.",
     },
     {
       q: "What are the storage limits for the Document Vault?",
-      a: "To keep the platform fast, responsive, and organized, each student can store up to 7 documents (5MB max each). Deleted files move to Trash and are safely purged after 7 days."
+      a: "To keep the platform fast, responsive, and organized, each student can store up to 7 documents (5MB max each). Deleted files move to Trash and are safely purged after 7 days.",
     },
     {
       q: "Does Nocus work offline?",
-      a: "Yes! Nocus saves your syllabus progress, bookmarks, and keep notes in local browser storage so you can study without uninterrupted internet access."
-    }
+      a: "Yes! Nocus saves your syllabus progress, bookmarks, and keep notes in local browser storage so you can study without uninterrupted internet access.",
+    },
   ];
 
   return (
     <div className="min-h-screen bg-[#070913] text-slate-100 font-sans antialiased selection:bg-indigo-500/30 selection:text-indigo-300 relative overflow-x-hidden">
-      {/* Decorative Glow Background Spheres */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-[20%] right-[-10%] w-[45%] h-[45%] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none" />
+      {/* Top Fixed Reading Progress Indicator */}
+      <ScrollProgressBar />
 
-      {/* Top Header Navigation */}
-      <header className="sticky top-0 z-50 bg-[#070913]/80 backdrop-blur-md border-b border-white/10 px-4 sm:px-8 py-3.5 transition-colors">
+      {/* Decorative Glow Background Spheres with Depth Parallax */}
+      <motion.div
+        style={shouldReduceMotion ? undefined : { y: blob1Y }}
+        className="absolute top-[-8%] left-[-10%] w-[55%] h-[55%] bg-violet-600/10 rounded-full blur-[140px] pointer-events-none will-change-transform"
+        aria-hidden="true"
+      />
+      <motion.div
+        style={shouldReduceMotion ? undefined : { y: blob2Y }}
+        className="absolute top-[22%] right-[-10%] w-[48%] h-[48%] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none will-change-transform"
+        aria-hidden="true"
+      />
+      <motion.div
+        style={shouldReduceMotion ? undefined : { y: blob3Y }}
+        className="absolute bottom-[-10%] left-[20%] w-[42%] h-[42%] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none will-change-transform"
+        aria-hidden="true"
+      />
+
+      {/* Sticky Header Navigation */}
+      <header
+        className={`sticky top-0 z-50 px-4 sm:px-8 py-3.5 transition-all duration-300 ${
+          isScrolled
+            ? "bg-[#070913]/95 backdrop-blur-xl border-b border-indigo-500/20 shadow-lg shadow-black/40"
+            : "bg-[#070913]/70 backdrop-blur-md border-b border-white/10"
+        }`}
+      >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer group">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center p-0.5 shadow-md shadow-indigo-600/20 group-hover:scale-105 transition-transform bg-white/5 border border-white/10">
@@ -126,23 +244,31 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: MOTION_CONFIG.tapScale }}
+              transition={{ duration: 0.15 }}
               onClick={scrollToAuth}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/30 cursor-pointer flex items-center gap-1.5"
             >
               <span>Sign In</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            </motion.button>
           </div>
         </div>
       </header>
 
       {/* Hero Section with Embedded Login & Highlights */}
-      <section className="relative pt-10 sm:pt-16 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          
-          {/* Left Column: Headline, Highlights & Guest CTA */}
-          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+      <section
+        ref={heroRef}
+        className="relative min-h-[calc(100vh-4.5rem)] flex flex-col justify-center pt-8 sm:pt-14 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+      >
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center my-auto">
+          {/* Left Column: Headline, Highlights & Guest CTA with subtle scroll parallax */}
+          <motion.div
+            style={shouldReduceMotion ? undefined : { y: heroTextY, opacity: heroTextOpacity }}
+            className="lg:col-span-7 space-y-6 text-center lg:text-left will-change-transform"
+          >
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -156,8 +282,8 @@ export default function LandingPage() {
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-[1.15]"
+              transition={{ delay: 0.1, duration: 0.5, ease: MOTION_CONFIG.ease }}
+              className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-[1.12]"
             >
               Master your syllabus.
               <br />
@@ -169,7 +295,7 @@ export default function LandingPage() {
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
+              transition={{ delay: 0.2, duration: 0.5, ease: MOTION_CONFIG.ease }}
               className="text-sm sm:text-base text-slate-300 leading-relaxed font-medium max-w-2xl mx-auto lg:mx-0"
             >
               Nocus turns complex curriculum PDFs into structured chapter checklists, keeps you disciplined with daily streaks and Pomodoro focus timers, and organizes all your study docs in one sleek space.
@@ -179,17 +305,20 @@ export default function LandingPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
+              transition={{ delay: 0.3, duration: 0.5, ease: MOTION_CONFIG.ease }}
               className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5"
             >
-              <a
+              <motion.a
                 href="#features"
-                className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold rounded-2xl shadow-xl shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                whileHover={{ scale: 1.03, y: MOTION_CONFIG.hoverLiftY }}
+                whileTap={{ scale: MOTION_CONFIG.tapScale }}
+                transition={{ duration: 0.15 }}
+                className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold rounded-2xl shadow-xl shadow-indigo-600/30 cursor-pointer flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 <span>Explore Features</span>
                 <ChevronRight className="w-4 h-4" />
-              </a>
+              </motion.a>
             </motion.div>
 
             {/* Key Value Bullets */}
@@ -213,7 +342,7 @@ export default function LandingPage() {
             </div>
 
             {/* Quick Stats Badges */}
-            <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto lg:mx-0 text-left">
+            <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 max-w-2xl mx-auto lg:mx-0 text-left">
               <div className="p-3 bg-white/5 border border-white/10 rounded-2xl">
                 <div className="text-lg font-black text-white">Instant</div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">AI Parsing</div>
@@ -231,14 +360,14 @@ export default function LandingPage() {
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Offline Ready</div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Right Column: Embedded Login & Sign Up Card */}
-          <div id="auth-card" className="lg:col-span-5 flex justify-center">
+          {/* Right Column: Embedded Login Card (STRICTLY NO parallax or scroll transforms to ensure 100% usability) */}
+          <div id="auth-card" className="lg:col-span-5 flex justify-center w-full">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
+              transition={{ delay: 0.15, duration: 0.5, ease: MOTION_CONFIG.ease }}
               className="w-full max-w-md bg-[#0E0C22]/90 border border-white/15 rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl relative overflow-hidden"
             >
               {/* Subtle Card Glow */}
@@ -337,18 +466,51 @@ export default function LandingPage() {
                   />
                 )}
               </div>
-
             </motion.div>
           </div>
-
         </div>
+
+        {/* Animated Bobbing Scroll Hint (fades out after 80px scroll) */}
+        {!shouldReduceMotion && (
+          <motion.div
+            style={{ opacity: hintOpacity }}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 hidden sm:flex flex-col items-center gap-1.5 text-slate-500 pointer-events-none select-none"
+            aria-hidden="true"
+          >
+            <span className="text-[9px] font-mono tracking-widest uppercase font-semibold text-slate-400">Scroll</span>
+            <motion.div
+              animate={{ y: [0, 5, 0] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+              className="w-4 h-7 rounded-full border border-white/20 flex items-start justify-center p-1"
+            >
+              <div className="w-1 h-1.5 rounded-full bg-indigo-400" />
+            </motion.div>
+          </motion.div>
+        )}
       </section>
 
-      {/* Interactive App Mockup Preview */}
-      <section id="preview" className="py-12 px-4 sm:px-6 max-w-6xl mx-auto">
-        <div className="p-3 sm:p-5 bg-white/5 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-xs">
+      {/* Interactive App Mockup Preview with scroll-linked scale & 3D tilt */}
+      <section id="preview" ref={previewRef} className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto relative">
+        {/* Soft reactive glow behind mockup that intensifies on scroll */}
+        <motion.div
+          style={{ opacity: shouldReduceMotion ? 0.25 : previewGlowOpacity }}
+          className="absolute inset-0 bg-gradient-to-r from-indigo-600/25 via-purple-600/20 to-pink-600/25 rounded-3xl blur-3xl pointer-events-none -z-10"
+          aria-hidden="true"
+        />
+
+        <motion.div
+          style={
+            shouldReduceMotion
+              ? undefined
+              : {
+                  scale: previewScale,
+                  rotateX: previewRotateX,
+                  transformPerspective: 1000,
+                }
+          }
+          className="p-3 sm:p-5 bg-white/5 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-xs will-change-transform"
+        >
           <div className="bg-[#0A0C1B] rounded-2xl border border-white/10 overflow-hidden shadow-inner p-4 sm:p-6 space-y-6">
-            
             {/* Mockup Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/10 gap-3">
               <div className="flex items-center gap-3">
@@ -421,152 +583,215 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-
           </div>
-        </div>
+        </motion.div>
       </section>
 
-      {/* Features Grid */}
-      <section id="features" className="py-20 px-4 sm:px-6 bg-white/[0.02] border-y border-white/10">
+      {/* Features Grid with whileInView & Stagger Reveal */}
+      <section id="features" className="py-20 sm:py-28 px-4 sm:px-6 bg-white/[0.02] border-y border-white/10">
         <div className="max-w-6xl mx-auto space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 font-mono">
-              ENGINEERED FOR SCHOLARS
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              Everything you need to excel in your studies
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-medium">
-              Built from the ground up to replace fragmented study tools with one focused, beautifully fast system.
-            </p>
-          </div>
+          <Reveal>
+            <div className="text-center max-w-2xl mx-auto space-y-3">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 font-mono">
+                ENGINEERED FOR SCHOLARS
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                Everything you need to excel in your studies
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-medium">
+                Built from the ground up to replace fragmented study tools with one focused, beautifully fast system.
+              </p>
+            </div>
+          </Reveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <StaggerGroup className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.map((f, idx) => {
               const Icon = f.icon;
               return (
-                <div
-                  key={idx}
-                  className="p-6 bg-white/5 border border-white/10 rounded-2xl hover:border-indigo-500/40 hover:bg-white/[0.07] transition-all space-y-3 group"
-                >
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-white">{f.title}</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                    {f.desc}
-                  </p>
-                </div>
+                <StaggerItem key={idx}>
+                  <motion.div
+                    whileHover={{ y: MOTION_CONFIG.hoverLiftY }}
+                    whileTap={{ scale: MOTION_CONFIG.tapScale }}
+                    transition={{ duration: 0.2 }}
+                    className="p-6 bg-white/5 border border-white/10 rounded-2xl hover:border-indigo-500/40 hover:bg-white/[0.07] transition-colors space-y-3 group cursor-default h-full"
+                  >
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-base font-bold text-white">{f.title}</h3>
+                    <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                      {f.desc}
+                    </p>
+                  </motion.div>
+                </StaggerItem>
               );
             })}
-          </div>
+          </StaggerGroup>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section id="how-it-works" className="py-20 px-4 sm:px-6">
+      {/* How It Works with Scroll-Linked Progress Line & Stagger Reveal */}
+      <section id="how-it-works" ref={howRef} className="py-20 sm:py-28 px-4 sm:px-6 relative">
         <div className="max-w-5xl mx-auto space-y-12">
-          <div className="text-center max-w-xl mx-auto space-y-3">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 font-mono">
-              SIMPLE 3-STEP WORKFLOW
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              From confusing syllabus to complete exam mastery
-            </h2>
-          </div>
+          <Reveal>
+            <div className="text-center max-w-xl mx-auto space-y-3">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 font-mono">
+                SIMPLE 3-STEP WORKFLOW
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                From confusing syllabus to complete exam mastery
+              </h2>
+            </div>
+          </Reveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-3 relative">
-              <span className="text-3xl font-black text-indigo-500/30 font-mono">01</span>
-              <h3 className="text-base font-bold text-white">Upload Course PDF</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Drop your university or school syllabus document. Our AI scans modules, chapters, and topics in seconds.
-              </p>
+          <div className="relative">
+            {/* Scroll-linked progress line connecting the steps on desktop */}
+            <div className="hidden md:block absolute top-12 left-12 right-12 h-[2px] bg-white/10 -z-0">
+              <motion.div
+                style={{ scaleX: shouldReduceMotion ? 1 : howLineScale }}
+                className="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500 origin-left"
+                aria-hidden="true"
+              />
             </div>
 
-            <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-3 relative">
-              <span className="text-3xl font-black text-indigo-500/30 font-mono">02</span>
-              <h3 className="text-base font-bold text-white">Study with Focus Timers</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Check off chapters as you complete revision. Turn on Pomodoro focus sessions to avoid phone and social media distractions.
-              </p>
-            </div>
-
-            <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-3 relative">
-              <span className="text-3xl font-black text-indigo-500/30 font-mono">03</span>
-              <h3 className="text-base font-bold text-white">Maintain Daily Momentum</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Watch your study streaks grow, keep formulas in Keep Notes, and walk into exam halls 100% prepared.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section id="faq" className="py-20 px-4 sm:px-6 bg-white/[0.02] border-t border-white/10">
-        <div className="max-w-3xl mx-auto space-y-8">
-          <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 font-mono">
-              FREQUENTLY ASKED QUESTIONS
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Got questions? We've got answers
-            </h2>
-          </div>
-
-          <div className="space-y-3">
-            {faqs.map((faq, idx) => (
-              <div
-                key={idx}
-                className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden transition-all"
-              >
-                <button
-                  onClick={() => toggleFaq(idx)}
-                  className="w-full p-4.5 text-left flex items-center justify-between gap-4 cursor-pointer hover:bg-white/10 transition-colors"
+            <StaggerGroup className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+              <StaggerItem>
+                <motion.div
+                  whileHover={{ y: MOTION_CONFIG.hoverLiftY }}
+                  className="p-6 bg-[#0E0C22] border border-white/10 rounded-2xl space-y-3 relative hover:border-indigo-500/30 transition-colors h-full"
                 >
-                  <span className="text-xs sm:text-sm font-bold text-white">{faq.q}</span>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${activeFaq === idx ? "rotate-180 text-indigo-400" : ""}`} />
-                </button>
-                {activeFaq === idx && (
-                  <div className="px-4.5 pb-4 text-xs text-slate-400 leading-relaxed border-t border-white/10 pt-3 animate-fade-in">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            ))}
+                  <span className="text-3xl font-black text-indigo-500/30 font-mono">01</span>
+                  <h3 className="text-base font-bold text-white">Upload Course PDF</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Drop your university or school syllabus document. Our AI scans modules, chapters, and topics in seconds.
+                  </p>
+                </motion.div>
+              </StaggerItem>
+
+              <StaggerItem>
+                <motion.div
+                  whileHover={{ y: MOTION_CONFIG.hoverLiftY }}
+                  className="p-6 bg-[#0E0C22] border border-white/10 rounded-2xl space-y-3 relative hover:border-indigo-500/30 transition-colors h-full"
+                >
+                  <span className="text-3xl font-black text-indigo-500/30 font-mono">02</span>
+                  <h3 className="text-base font-bold text-white">Study with Focus Timers</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Check off chapters as you complete revision. Turn on Pomodoro focus sessions to avoid phone and social media distractions.
+                  </p>
+                </motion.div>
+              </StaggerItem>
+
+              <StaggerItem>
+                <motion.div
+                  whileHover={{ y: MOTION_CONFIG.hoverLiftY }}
+                  className="p-6 bg-[#0E0C22] border border-white/10 rounded-2xl space-y-3 relative hover:border-indigo-500/30 transition-colors h-full"
+                >
+                  <span className="text-3xl font-black text-indigo-500/30 font-mono">03</span>
+                  <h3 className="text-base font-bold text-white">Maintain Daily Momentum</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Watch your study streaks grow, keep formulas in Keep Notes, and walk into exam halls 100% prepared.
+                  </p>
+                </motion.div>
+              </StaggerItem>
+            </StaggerGroup>
           </div>
         </div>
       </section>
 
-      {/* Call to Action Banner */}
-      <section className="py-20 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-indigo-950 via-purple-950 to-violet-950 border border-indigo-500/20 text-center space-y-6 shadow-2xl relative overflow-hidden">
-          <div className="relative z-10 space-y-4">
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              Ready to take control of your study routine?
-            </h2>
-            <p className="text-xs sm:text-sm text-indigo-200/90 max-w-xl mx-auto font-medium leading-relaxed">
-              Start structuring your course syllabus today. No credit cards or complicated setups required.
-            </p>
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                onClick={scrollToAuth}
-                className="w-full sm:w-auto px-8 py-3.5 bg-white text-indigo-950 hover:bg-indigo-50 text-sm font-black rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer inline-flex items-center justify-center gap-2"
-              >
-                <GraduationCap className="w-4 h-4" />
-                <span>Launch App Free</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <button
-                onClick={scrollToAuth}
-                className="w-full sm:w-auto px-6 py-3.5 bg-white/10 hover:bg-white/15 border border-white/20 text-white text-sm font-bold rounded-2xl transition-all cursor-pointer"
-              >
-                Sign In to Account
-              </button>
+      {/* FAQ Section with Reveal & Stagger */}
+      <section id="faq" className="py-20 sm:py-28 px-4 sm:px-6 bg-white/[0.02] border-t border-white/10">
+        <div className="max-w-3xl mx-auto space-y-8">
+          <Reveal>
+            <div className="text-center space-y-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 font-mono">
+                FREQUENTLY ASKED QUESTIONS
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                Got questions? We've got answers
+              </h2>
+            </div>
+          </Reveal>
+
+          <StaggerGroup className="space-y-3">
+            {faqs.map((faq, idx) => (
+              <StaggerItem key={idx}>
+                <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden transition-colors hover:border-white/20">
+                  <button
+                    onClick={() => toggleFaq(idx)}
+                    className="w-full p-4.5 text-left flex items-center justify-between gap-4 cursor-pointer hover:bg-white/5 transition-colors"
+                    aria-expanded={activeFaq === idx}
+                  >
+                    <span className="text-xs sm:text-sm font-bold text-white">{faq.q}</span>
+                    <motion.div
+                      animate={{ rotate: activeFaq === idx ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ChevronDown
+                        className={`w-4 h-4 transition-colors ${
+                          activeFaq === idx ? "text-indigo-400" : "text-slate-400"
+                        }`}
+                      />
+                    </motion.div>
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {activeFaq === idx && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: MOTION_CONFIG.ease }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4.5 pb-4 text-xs text-slate-400 leading-relaxed border-t border-white/10 pt-3">
+                          {faq.a}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerGroup>
+        </div>
+      </section>
+
+      {/* Call to Action Banner with Reveal & Micro-Interactions */}
+      <section className="py-20 sm:py-28 px-4 sm:px-6">
+        <Reveal>
+          <div className="max-w-4xl mx-auto p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-indigo-950 via-purple-950 to-violet-950 border border-indigo-500/20 text-center space-y-6 shadow-2xl relative overflow-hidden">
+            <div className="relative z-10 space-y-4">
+              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                Ready to take control of your study routine?
+              </h2>
+              <p className="text-xs sm:text-sm text-indigo-200/90 max-w-xl mx-auto font-medium leading-relaxed">
+                Start structuring your course syllabus today. No credit cards or complicated setups required.
+              </p>
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: MOTION_CONFIG.tapScale }}
+                  transition={{ duration: 0.15 }}
+                  onClick={scrollToAuth}
+                  className="w-full sm:w-auto px-8 py-3.5 bg-white text-indigo-950 hover:bg-indigo-50 text-sm font-black rounded-2xl shadow-xl transition-all cursor-pointer inline-flex items-center justify-center gap-2"
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  <span>Launch App Free</span>
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: MOTION_CONFIG.tapScale }}
+                  transition={{ duration: 0.15 }}
+                  onClick={scrollToAuth}
+                  className="w-full sm:w-auto px-6 py-3.5 bg-white/10 hover:bg-white/15 border border-white/20 text-white text-sm font-bold rounded-2xl transition-all cursor-pointer"
+                >
+                  Sign In to Account
+                </motion.button>
+              </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* Footer */}
