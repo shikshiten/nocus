@@ -1,5 +1,5 @@
 // Nocus PWA Service Worker (Production Only)
-const CACHE_NAME = 'nocus-cache-v2';
+const CACHE_NAME = 'nocus-cache-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
