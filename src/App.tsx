@@ -1222,14 +1222,20 @@ export default function App() {
 
       if (Array.isArray(tursoList) && tursoList.length > 0) {
         // Cloud has data: Cloud is authoritative source of truth for logged-in user
-        setSyllabuses(tursoList);
-        localStorage.setItem("syllabuses", JSON.stringify(tursoList));
+        const currentSavedStr = localStorage.getItem("syllabuses");
+        const newTursoStr = JSON.stringify(tursoList);
 
-        const savedActiveId = localStorage.getItem("activeSyllabusId");
-        const active = tursoList.find(s => s.id === savedActiveId) || tursoList[0] || null;
-        setCurrentSyllabus(active);
-        if (active) {
-          localStorage.setItem("activeSyllabusId", active.id);
+        // Only update React state if cloud data actually changed to guarantee silky-smooth UI
+        if (currentSavedStr !== newTursoStr) {
+          setSyllabuses(tursoList);
+          localStorage.setItem("syllabuses", newTursoStr);
+
+          const savedActiveId = localStorage.getItem("activeSyllabusId");
+          const active = tursoList.find(s => s.id === savedActiveId) || tursoList[0] || null;
+          setCurrentSyllabus(active);
+          if (active) {
+            localStorage.setItem("activeSyllabusId", active.id);
+          }
         }
         if (showToast) {
           addNotification("Cloud Synced ☁️", `Live cloud sync completed! Loaded ${tursoList.length} subject(s).`, "success");
@@ -1251,10 +1257,13 @@ export default function App() {
           }
         } else {
           // Cloud has 0 items
-          setSyllabuses([]);
-          localStorage.setItem("syllabuses", JSON.stringify([]));
-          setCurrentSyllabus(null);
-          localStorage.removeItem("activeSyllabusId");
+          const currentSavedStr = localStorage.getItem("syllabuses");
+          if (currentSavedStr !== "[]") {
+            setSyllabuses([]);
+            localStorage.setItem("syllabuses", JSON.stringify([]));
+            setCurrentSyllabus(null);
+            localStorage.removeItem("activeSyllabusId");
+          }
           if (showToast) {
             addNotification("Cloud Synced ☁️", "Cloud is up to date (no subjects).", "info");
           }
@@ -1326,12 +1335,12 @@ export default function App() {
     };
     document.addEventListener("visibilitychange", handleVisibility);
 
-    // Periodic heartbeat sync every 12 seconds when tab is active
+    // High-frequency, silent background sync every 6 seconds when tab is active
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         handleSync();
       }
-    }, 12000);
+    }, 6000);
 
     return () => {
       window.removeEventListener("focus", handleSync);
@@ -3021,24 +3030,7 @@ export default function App() {
 
 
 
-            {/* Real-time Cloud Sync Button */}
-            <button
-              onClick={() => {
-                if (user?.id) {
-                  loadSyllabusesFromDatabase(user.id, true);
-                } else {
-                  addNotification("Cloud Sync ☁️", "Sign in to keep your syllabuses synced across your phone and laptop in real-time.", "info");
-                }
-              }}
-              disabled={syncing}
-              className={`p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--text)] cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 shadow-xs flex items-center justify-center ${
-                syncing ? "opacity-80" : ""
-              }`}
-              title={user ? "Sync with Cloud (Turso)" : "Sign in to enable live cross-device sync"}
-              aria-label="Sync with cloud"
-            >
-              <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin text-primary-app" : ""}`} />
-            </button>
+
 
             {/* Dark Mode Toggle */}
             <button
