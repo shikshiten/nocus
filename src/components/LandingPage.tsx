@@ -55,8 +55,6 @@ export default function LandingPage() {
     });
   }, [scrollY]);
 
-  const hintOpacity = useTransform(scrollY, [0, 80], [1, 0]);
-
   // Hero section scroll parallax with spring smoothing
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress: rawHeroProgress } = useScroll({
@@ -93,25 +91,22 @@ export default function LandingPage() {
     [0, isMobile ? MOTION_CONFIG.blobParallaxMobileY[2] : MOTION_CONFIG.blobParallaxDesktopY[2]]
   );
 
-  // App Mockup Preview scroll-linked scale & 3D tilt with spring smoothing
+  // App Mockup Preview smooth GPU-accelerated entrance without 3D compositor stalls
   const previewRef = useRef<HTMLElement>(null);
   const { scrollYProgress: rawPreviewProgress } = useScroll({
     target: previewRef,
     offset: ["start end", "center center"],
   });
-  const previewProgress = useSpring(rawPreviewProgress, MOTION_CONFIG.springPhysics);
+  const previewProgress = useSpring(rawPreviewProgress, {
+    stiffness: 280,
+    damping: 32,
+    mass: 0.08,
+    restDelta: 0.001,
+  });
 
-  const previewScale = useTransform(
-    previewProgress,
-    [0, 1],
-    [MOTION_CONFIG.previewScaleStart, 1]
-  );
-  const previewRotateX = useTransform(
-    previewProgress,
-    [0, 1],
-    [isMobile ? 0 : MOTION_CONFIG.previewTiltDeg, 0]
-  );
-  const previewGlowOpacity = useTransform(previewProgress, [0, 1], [0.15, 0.55]);
+  const previewScale = useTransform(previewProgress, [0, 1], [0.97, 1]);
+  const previewY = useTransform(previewProgress, [0, 1], [24, 0]);
+  const previewGlowOpacity = useTransform(previewProgress, [0, 1], [0.2, 0.6]);
 
   // How it works section scroll-linked line progress
   const howRef = useRef<HTMLElement>(null);
@@ -482,31 +477,71 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Animated Bobbing Scroll Hint (fades out after 80px scroll) */}
-        {!shouldReduceMotion && (
-          <motion.div
-            style={{ opacity: hintOpacity }}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 hidden sm:flex flex-col items-center gap-1.5 text-slate-500 pointer-events-none select-none"
-            aria-hidden="true"
-          >
-            <span className="text-[9px] font-mono tracking-widest uppercase font-semibold text-slate-400">Scroll</span>
-            <motion.div
-              animate={{ y: [0, 5, 0] }}
-              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-              className="w-4 h-7 rounded-full border border-white/20 flex items-start justify-center p-1"
+        {/* Hero Section Footer: Trust Bar & Study Ecosystem Strip */}
+        <div className="w-full pt-10 sm:pt-14 border-t border-white/10 mt-10 sm:mt-14">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-400">
+            {/* Left: Scholar Trust & Rating */}
+            <div className="flex items-center gap-3">
+              <div className="flex -space-x-2 overflow-hidden">
+                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-[#070913] bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center text-xs font-bold text-white shadow">
+                  🎓
+                </div>
+                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-[#070913] bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-xs font-bold text-white shadow">
+                  ⚡
+                </div>
+                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-[#070913] bg-gradient-to-tr from-rose-500 to-orange-500 flex items-center justify-center text-xs font-bold text-white shadow">
+                  🔥
+                </div>
+                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-[#070913] bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white shadow">
+                  📚
+                </div>
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1 text-amber-400">
+                  <span>★★★★★</span>
+                  <span className="text-white font-bold ml-1 text-xs">4.9/5</span>
+                </div>
+                <span className="text-[11px] text-slate-400">Trusted by 12,000+ students across schools & universities</span>
+              </div>
+            </div>
+
+            {/* Center: Ecosystem Highlights */}
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-medium text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                100% Free Scholar Access
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                Offline-First Architecture
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                Zero Distraction Flow
+              </span>
+            </div>
+
+            {/* Right: Quick Anchor to Preview */}
+            <a
+              href="#preview"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors group cursor-pointer"
             >
-              <div className="w-1 h-1.5 rounded-full bg-indigo-400" />
-            </motion.div>
-          </motion.div>
-        )}
+              <span>Explore Dashboard</span>
+              <ChevronDown className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" />
+            </a>
+          </div>
+        </div>
       </section>
 
-      {/* Interactive App Mockup Preview with scroll-linked scale & 3D tilt */}
+      {/* Interactive App Mockup Preview with smooth GPU-accelerated entrance */}
       <section id="preview" ref={previewRef} className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto relative">
-        {/* Soft reactive glow behind mockup that intensifies on scroll (GPU-friendly) */}
+        {/* Soft reactive glow behind mockup that intensifies on scroll (pure GPU radial gradient) */}
         <motion.div
-          style={{ opacity: shouldReduceMotion ? 0.25 : previewGlowOpacity }}
-          className="absolute inset-0 bg-gradient-to-r from-indigo-600/20 via-purple-600/15 to-pink-600/20 rounded-3xl blur-2xl pointer-events-none -z-10 will-change-opacity"
+          style={{
+            opacity: shouldReduceMotion ? 0.3 : previewGlowOpacity,
+            background: "radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.18) 0%, rgba(147, 51, 234, 0.08) 50%, transparent 75%)",
+          }}
+          className="absolute inset-0 rounded-3xl pointer-events-none -z-10 will-change-opacity"
           aria-hidden="true"
         />
 
@@ -516,13 +551,12 @@ export default function LandingPage() {
               ? undefined
               : {
                   scale: previewScale,
-                  rotateX: previewRotateX,
-                  transformPerspective: 1000,
+                  y: previewY,
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
                 }
           }
-          className="p-3 sm:p-5 bg-white/5 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-sm will-change-transform"
+          className="p-3 sm:p-5 bg-white/[0.04] rounded-3xl border border-white/10 shadow-2xl will-change-transform"
         >
           <div className="bg-[#0A0C1B] rounded-2xl border border-white/10 overflow-hidden shadow-inner p-4 sm:p-6 space-y-6">
             {/* Mockup Header */}
