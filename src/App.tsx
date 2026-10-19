@@ -1240,31 +1240,17 @@ export default function App() {
           addNotification("Cloud Synced ☁️", `Live cloud sync completed! Loaded ${tursoList.length} subject(s).`, "success");
         }
       } else if (Array.isArray(tursoList) && tursoList.length === 0) {
-        // Cloud is currently empty. Check if this device has existing guest/local syllabuses that need first-time cloud migration
-        const migrationKey = `nocus_migrated_${uid}`;
-        const hasMigrated = localStorage.getItem(migrationKey);
-
-        if (!hasMigrated && localList && localList.length > 0) {
-          // First time syncing guest data to user's new account
+        // Cloud currently has 0 items. Preserve any existing local syllabuses and back them up to cloud
+        if (localList && localList.length > 0) {
           for (const item of localList) {
             await syncSyllabusToTurso({ ...item, userId: uid }, uid);
           }
-          localStorage.setItem(migrationKey, "true");
           setSyllabuses(localList);
+          const savedActiveId = localStorage.getItem("activeSyllabusId");
+          const active = localList.find(s => s.id === savedActiveId) || localList[0] || null;
+          setCurrentSyllabus(active);
           if (showToast) {
             addNotification("Cloud Synced ☁️", `Uploaded ${localList.length} local syllabus(es) to cloud.`, "success");
-          }
-        } else {
-          // Cloud has 0 items
-          const currentSavedStr = localStorage.getItem("syllabuses");
-          if (currentSavedStr !== "[]") {
-            setSyllabuses([]);
-            localStorage.setItem("syllabuses", JSON.stringify([]));
-            setCurrentSyllabus(null);
-            localStorage.removeItem("activeSyllabusId");
-          }
-          if (showToast) {
-            addNotification("Cloud Synced ☁️", "Cloud is up to date (no subjects).", "info");
           }
         }
       } else {
@@ -1292,9 +1278,6 @@ export default function App() {
 
     if (user?.id) {
       loadSyllabusesFromDatabase(user.id);
-    } else {
-      setSyllabuses([]);
-      setCurrentSyllabus(null);
     }
   }, [clerkLoaded, user?.id]);
 

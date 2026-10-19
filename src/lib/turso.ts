@@ -36,7 +36,7 @@ export async function initTursoTables(): Promise<void> {
 /**
  * Syllabuses Data Operations (via Secure Backend API)
  */
-export async function loadUserSyllabusesFromTurso(userId: string): Promise<Syllabus[]> {
+export async function loadUserSyllabusesFromTurso(userId: string): Promise<Syllabus[] | null> {
   try {
     const headers = await getAuthHeaders();
     const apiRes = await fetch(`/api/sync-syllabuses?userId=${encodeURIComponent(userId)}`, {
@@ -48,12 +48,16 @@ export async function loadUserSyllabusesFromTurso(userId: string): Promise<Sylla
       if (Array.isArray(data.syllabuses)) {
         return data.syllabuses;
       }
+    } else {
+      console.warn("API Turso sync load returned status:", apiRes.status);
+      return null;
     }
   } catch (apiErr) {
     console.warn("API Turso sync load fallback notice:", apiErr);
+    return null;
   }
 
-  return [];
+  return null;
 }
 
 export async function syncSyllabusToTurso(s: Syllabus, userId: string): Promise<void> {
