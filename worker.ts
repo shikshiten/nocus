@@ -86,6 +86,130 @@ Return ONLY a JSON object with this exact structure:
   return JSON.parse(raw);
 }
 
+function extractPdfTextFromBase64(base64: string): string {
+  try {
+    const binary = atob(base64);
+    let extracted = "";
+    const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+    let match: RegExpExecArray | null;
+    while ((match = streamRegex.exec(binary)) !== null) {
+      const stream = match[1];
+      const btRegex = /BT[\r\n\s]+([\s\S]*?)[\r\n\s]+ET/g;
+      let btMatch: RegExpExecArray | null;
+      while ((btMatch = btRegex.exec(stream)) !== null) {
+        const btBlock = btMatch[1];
+        const tjRegex = /\(([^)]+)\)\s*Tj/g;
+        let tjMatch: RegExpExecArray | null;
+        while ((tjMatch = tjRegex.exec(btBlock)) !== null) {
+          extracted += tjMatch[1] + " ";
+        }
+        const tjArrRegex = /\[([^\]]+)\]\s*TJ/g;
+        let arrMatch: RegExpExecArray | null;
+        while ((arrMatch = tjArrRegex.exec(btBlock)) !== null) {
+          const strRegex = /\(([^)]+)\)/g;
+          let sMatch: RegExpExecArray | null;
+          while ((sMatch = strRegex.exec(arrMatch[1])) !== null) {
+            extracted += sMatch[1];
+          }
+          extracted += " ";
+        }
+      }
+    }
+    return extracted.trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+function normalizeSyllabusData(raw: any, fallbackName = "Syllabus"): { subjectName: string; units: Array<{ name: string; topics: string[] }> } {
+  if (!raw) return { subjectName: fallbackName, units: [] };
+
+  let unitsRaw: any[] = [];
+  let subjectName = fallbackName;
+
+  if (Array.isArray(raw)) {
+    unitsRaw = raw;
+  } else if (typeof raw === "object") {
+    subjectName = 
+      raw.subjectName ||
+      raw.subject ||
+      raw.courseName ||
+      raw.courseTitle ||
+      raw.course ||
+      raw.title ||
+      raw.name ||
+      fallbackName;
+
+    if (Array.isArray(raw.units)) {
+      unitsRaw = raw.units;
+    } else if (Array.isArray(raw.modules)) {
+      unitsRaw = raw.modules;
+    } else if (Array.isArray(raw.chapters)) {
+      unitsRaw = raw.chapters;
+    } else if (Array.isArray(raw.sections)) {
+      unitsRaw = raw.sections;
+    } else if (Array.isArray(raw.syllabus)) {
+      unitsRaw = raw.syllabus;
+    } else if (Array.isArray(raw.curriculum)) {
+      unitsRaw = raw.curriculum;
+    } else {
+      for (const key of Object.keys(raw)) {
+        if (Array.isArray(raw[key]) && raw[key].length > 0) {
+          unitsRaw = raw[key];
+          if (subjectName === fallbackName && key !== "units") {
+            subjectName = key;
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  const normalizedUnits = unitsRaw.map((u: any, idx: number) => {
+    if (typeof u === "string") {
+      return {
+        name: `Unit ${idx + 1}: ${u}`,
+        topics: [u]
+      };
+    }
+
+    const unitNum = u.unitNumber || u.unit || u.number || (idx + 1);
+    const unitTitle = u.name || u.title || u.unitName || u.moduleName || u.chapterName || u.sectionName || "";
+    const cleanUnitName = unitTitle.toLowerCase().includes("unit") || unitTitle.toLowerCase().includes("module") || unitTitle.toLowerCase().includes("chapter")
+      ? unitTitle
+      : `Unit ${unitNum}: ${unitTitle || "General Topics"}`;
+
+    let rawTopics = u.topics || u.subtopics || u.subTopics || u.concepts || u.items || u.chapters || u.content || [];
+    if (!Array.isArray(rawTopics)) {
+      if (typeof rawTopics === "string") {
+        rawTopics = rawTopics.split(/[\n,;•-]+/).map(s => s.trim()).filter(Boolean);
+      } else {
+        rawTopics = [];
+      }
+    }
+
+    const cleanTopics = rawTopics
+      .map((t: any) => {
+        if (typeof t === "string") return t.trim();
+        if (t && typeof t === "object") {
+          return (t.name || t.title || t.topic || t.topicName || t.concept || t.item || JSON.stringify(t)).trim();
+        }
+        return String(t).trim();
+      })
+      .filter((t: string) => t.length > 0);
+
+    return {
+      name: cleanUnitName.trim(),
+      topics: cleanTopics.length > 0 ? cleanTopics : ["Key Concepts & Fundamentals"]
+    };
+  }).filter(u => u.name && u.topics.length > 0);
+
+  return {
+    subjectName: (subjectName || fallbackName).trim(),
+    units: normalizedUnits
+  };
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -113,9 +237,12 @@ export default {
         // Use Gemini exclusively for syllabus parsing
         const gemini = getGeminiClient(env);
         if (gemini) {
-          try {
-            const prompt = `You are an expert academic curriculum assistant. Parse the provided syllabus document completely and extract ALL Units, Modules, Chapters, and Topics into a highly structured JSON format.
+          const prompt = `You are an expert academic curriculum assistant. Parse the provided syllabus document completely and organize ALL Units, Modules, Chapters, and Topics into a highly structured JSON format.
+Analyze the ENTIRE document thoroughly across all pages. Do NOT stop after the first unit or skip any sections.
 Extract every single Unit/Module/Chapter (e.g. Unit 1, Unit 2, Unit 3, Unit 4, Unit 5, etc.) and all corresponding sub-topics under each unit.
+Group the topics logically under their respective Units. If there are no explicit units, create logical units based on the subject's major chapters or themes.
+Keep the unit names descriptive (e.g. "Unit 1: Digital Fundamentals"), and keep each topic short, clear, and action-oriented (maximum 10 words per topic).
+
 Return ONLY a JSON object with this exact structure:
 {
   "subjectName": string,
@@ -125,9 +252,13 @@ Return ONLY a JSON object with this exact structure:
   }>
 }`;
 
-            let contents: any[] = [];
-            if (pdfBase64) {
-              const rawBase64 = pdfBase64.includes(",") ? pdfBase64.split(",")[1] : pdfBase64;
+          let contents: any[] = [];
+          if (pdfBase64) {
+            const rawBase64 = pdfBase64.includes(",") ? pdfBase64.split(",")[1] : pdfBase64;
+            const extractedText = extractPdfTextFromBase64(rawBase64);
+            if (extractedText && extractedText.length >= 30) {
+              contents.push(`Syllabus Document Text:\n${extractedText}\n\n${prompt}`);
+            } else {
               contents.push({
                 inlineData: {
                   data: rawBase64,
@@ -135,23 +266,33 @@ Return ONLY a JSON object with this exact structure:
                 }
               });
               contents.push(prompt);
-            } else {
-              contents.push(`${prompt}\n\nHere is the syllabus text:\n${syllabusText}`);
             }
+          } else {
+            contents.push(`Syllabus Copy-Pasted Text:\n${syllabusText}\n\n${prompt}`);
+          }
 
-            const response = await gemini.models.generateContent({
-              model: "gemini-flash-latest",
-              contents,
-              config: {
-                responseMimeType: "application/json"
+          const candidateModels = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"];
+          for (const model of candidateModels) {
+            try {
+              const response = await gemini.models.generateContent({
+                model,
+                contents,
+                config: {
+                  maxOutputTokens: 8192,
+                  responseMimeType: "application/json"
+                }
+              });
+
+              const text = response.text || "{}";
+              const cleaned = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+              const parsed = JSON.parse(cleaned);
+              const normalized = normalizeSyllabusData(parsed, "Syllabus Course");
+              if (normalized.units.length > 0) {
+                return jsonResponse(normalized);
               }
-            });
-
-            const text = response.text || "{}";
-            const parsed = JSON.parse(text.replace(/```(?:json)?/g, "").trim());
-            return jsonResponse(parsed);
-          } catch (geminiErr) {
-            console.error("Worker Gemini parsing error:", geminiErr);
+            } catch (geminiErr) {
+              console.error(`Worker Gemini error with model ${model}:`, geminiErr);
+            }
           }
         }
 

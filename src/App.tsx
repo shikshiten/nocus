@@ -187,6 +187,131 @@ export default function App() {
     previewSyllabus: null,
   });
 
+  const extractPdfTextFromBase64 = (base64: string): string => {
+    try {
+      const clean = base64.replace(/^data:[^;]+;base64,/, "");
+      const binary = atob(clean);
+      let extracted = "";
+      const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+      let match: RegExpExecArray | null;
+      while ((match = streamRegex.exec(binary)) !== null) {
+        const stream = match[1];
+        const btRegex = /BT[\r\n\s]+([\s\S]*?)[\r\n\s]+ET/g;
+        let btMatch: RegExpExecArray | null;
+        while ((btMatch = btRegex.exec(stream)) !== null) {
+          const btBlock = btMatch[1];
+          const tjRegex = /\(([^)]+)\)\s*Tj/g;
+          let tjMatch: RegExpExecArray | null;
+          while ((tjMatch = tjRegex.exec(btBlock)) !== null) {
+            extracted += tjMatch[1] + " ";
+          }
+          const tjArrRegex = /\[([^\]]+)\]\s*TJ/g;
+          let arrMatch: RegExpExecArray | null;
+          while ((arrMatch = tjArrRegex.exec(btBlock)) !== null) {
+            const strRegex = /\(([^)]+)\)/g;
+            let sMatch: RegExpExecArray | null;
+            while ((sMatch = strRegex.exec(arrMatch[1])) !== null) {
+              extracted += sMatch[1];
+            }
+            extracted += " ";
+          }
+        }
+      }
+      return extracted.trim();
+    } catch {
+      return "";
+    }
+  };
+
+  const normalizeSyllabusData = (raw: any, fallbackName = "Syllabus"): { subjectName: string; units: Array<{ name: string; topics: string[] }> } => {
+    if (!raw) return { subjectName: fallbackName, units: [] };
+
+    let unitsRaw: any[] = [];
+    let subjectName = fallbackName;
+
+    if (Array.isArray(raw)) {
+      unitsRaw = raw;
+    } else if (typeof raw === "object") {
+      subjectName = 
+        raw.subjectName ||
+        raw.subject ||
+        raw.courseName ||
+        raw.courseTitle ||
+        raw.course ||
+        raw.title ||
+        raw.name ||
+        fallbackName;
+
+      if (Array.isArray(raw.units)) {
+        unitsRaw = raw.units;
+      } else if (Array.isArray(raw.modules)) {
+        unitsRaw = raw.modules;
+      } else if (Array.isArray(raw.chapters)) {
+        unitsRaw = raw.chapters;
+      } else if (Array.isArray(raw.sections)) {
+        unitsRaw = raw.sections;
+      } else if (Array.isArray(raw.syllabus)) {
+        unitsRaw = raw.syllabus;
+      } else if (Array.isArray(raw.curriculum)) {
+        unitsRaw = raw.curriculum;
+      } else {
+        for (const key of Object.keys(raw)) {
+          if (Array.isArray(raw[key]) && raw[key].length > 0) {
+            unitsRaw = raw[key];
+            if (subjectName === fallbackName && key !== "units") {
+              subjectName = key;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    const normalizedUnits = unitsRaw.map((u: any, idx: number) => {
+      if (typeof u === "string") {
+        return {
+          name: `Unit ${idx + 1}: ${u}`,
+          topics: [u]
+        };
+      }
+
+      const unitNum = u.unitNumber || u.unit || u.number || (idx + 1);
+      const unitTitle = u.name || u.title || u.unitName || u.moduleName || u.chapterName || u.sectionName || "";
+      const cleanUnitName = unitTitle.toLowerCase().includes("unit") || unitTitle.toLowerCase().includes("module") || unitTitle.toLowerCase().includes("chapter")
+        ? unitTitle
+        : `Unit ${unitNum}: ${unitTitle || "General Topics"}`;
+
+      let rawTopics = u.topics || u.subtopics || u.subTopics || u.concepts || u.items || u.chapters || u.content || [];
+      if (!Array.isArray(rawTopics)) {
+        if (typeof rawTopics === "string") {
+          rawTopics = rawTopics.split(/[\n,;•-]+/).map(s => s.trim()).filter(Boolean);
+        } else {
+          rawTopics = [];
+        }
+      }
+
+      const cleanTopics = rawTopics
+        .map((t: any) => {
+          if (typeof t === "string") return t.trim();
+          if (t && typeof t === "object") {
+            return (t.name || t.title || t.topic || t.topicName || t.concept || t.item || JSON.stringify(t)).trim();
+          }
+          return String(t).trim();
+        })
+        .filter((t: string) => t.length > 0);
+
+      return {
+        name: cleanUnitName.trim(),
+        topics: cleanTopics.length > 0 ? cleanTopics : ["Key Concepts & Fundamentals"]
+      };
+    }).filter(u => u.name && u.topics.length > 0);
+
+    return {
+      subjectName: (subjectName || fallbackName).trim(),
+      units: normalizedUnits
+    };
+  };
+
   const parseSyllabusLocally = (text: string, defaultSubjectName?: string): PreviewSyllabusData => {
     const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
     let subjectName = defaultSubjectName || "New Subject";
@@ -306,6 +431,7 @@ export default function App() {
     }
 
     setUploadState(prev => ({ ...prev, loading: true, error: null }));
+    const fallbackName = file.name.replace(/\.[^/.]+$/, "");
 
     try {
       const reader = new FileReader();
@@ -314,6 +440,7 @@ export default function App() {
           const base64 = e.target?.result as string;
           let parsed: any = null;
 
+          // Tier 1: Try server PDF parsing
           try {
             const res = await fetch("/api/parse-syllabus", {
               method: "POST",
@@ -328,22 +455,47 @@ export default function App() {
 
             if (res.ok) {
               parsed = await res.json();
-            } else {
-              const errJson = await res.json().catch(() => ({}));
-              throw new Error(errJson.error || "Unable to parse syllabus document.");
             }
           } catch (apiErr: any) {
-            console.error("API syllabus parse error:", apiErr);
-            throw apiErr;
+            console.warn("Direct PDF base64 API parse failed, attempting text extraction fallback:", apiErr);
           }
 
-          if (!parsed || !parsed.subjectName || !parsed.units || !Array.isArray(parsed.units) || parsed.units.length === 0) {
-            throw new Error("Could not extract syllabus structure from the PDF file.");
+          // Tier 2: Extract text from PDF client-side and send text to API
+          const localExtractedText = extractPdfTextFromBase64(base64);
+          if ((!parsed || !parsed.units || parsed.units.length === 0) && localExtractedText && localExtractedText.length >= 30) {
+            try {
+              const res2 = await fetch("/api/parse-syllabus", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  syllabusText: localExtractedText,
+                }),
+              });
+              if (res2.ok) {
+                parsed = await res2.json();
+              }
+            } catch (textApiErr) {
+              console.warn("Text syllabus API parse failed, using client-side parser fallback:", textApiErr);
+            }
+          }
+
+          // Tier 3: Client-side intelligent parser fallback if AI service was unreachable
+          if ((!parsed || !parsed.units || parsed.units.length === 0) && localExtractedText && localExtractedText.length >= 20) {
+            parsed = parseSyllabusLocally(localExtractedText, fallbackName);
+          }
+
+          // Normalize whatever structure was produced
+          const normalized = normalizeSyllabusData(parsed, fallbackName);
+
+          if (!normalized.units || normalized.units.length === 0) {
+            throw new Error("Unable to extract syllabus structure from this PDF. Please ensure the document is clear, or copy-paste the syllabus text directly.");
           }
 
           const mapped: PreviewSyllabusData = {
-            subjectName: parsed.subjectName || file.name,
-            units: (parsed.units || []).map((u: any) => ({
+            subjectName: normalized.subjectName || fallbackName,
+            units: normalized.units.map((u: any) => ({
               name: u.name,
               topics: (u.topics || []).map((t: any) => ({
                 name: typeof t === "string" ? t : t.name || "Topic",
@@ -355,7 +507,7 @@ export default function App() {
           setUploadState(prev => ({ ...prev, previewSyllabus: mapped, loading: false }));
           addNotification(
             "Syllabus Parsed 📚",
-            `Syllabus for "${mapped.subjectName}" has been created! Verify and import now.`,
+            `Syllabus for "${mapped.subjectName}" has been organized! Verify and build your tracker.`,
             "success"
           );
         } catch (err: any) {
@@ -404,9 +556,11 @@ export default function App() {
         parsed = parseSyllabusLocally(textVal.trim());
       }
 
+      const normalized = normalizeSyllabusData(parsed, "New Course");
+
       const mapped: PreviewSyllabusData = {
-        subjectName: parsed.subjectName,
-        units: (parsed.units || []).map((u: any) => ({
+        subjectName: normalized.subjectName,
+        units: normalized.units.map((u: any) => ({
           name: u.name,
           topics: (u.topics || []).map((t: any) => ({
             name: typeof t === "string" ? t : t.name || "Topic",

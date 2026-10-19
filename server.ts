@@ -46,14 +46,14 @@ async function generateContentWithRetry(
   maxRetries = 3,
   delayMs = 1500
 ): Promise<any> {
-  const initialModel = params.model || "gemini-flash-latest";
+  const initialModel = params.model || "gemini-3.8-flash";
   
   // Define fallback models to try if the initial model fails or is overloaded
   const fallbackCandidates = [
-    "gemini-flash-latest",
+    "gemini-3.8-flash",
     "gemini-3.5-flash",
-    "gemini-flash-lite-latest",
-    "gemini-3.8-flash"
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest"
   ];
   
   // Ensure we try the initial model first, followed by the rest of the candidates in order
@@ -223,6 +223,147 @@ function cleanAndParseJSON(text: string): any {
   }
 }
 
+async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
+  // 1. Try PDFParse (handles flate-decode, font mappings, and multi-page layouts)
+  try {
+    const { PDFParse } = await import("pdf-parse");
+    const parser = new PDFParse(new Uint8Array(buffer));
+    const result = await parser.getText();
+    if (result && result.text && result.text.trim().length >= 30) {
+      return result.text.trim();
+    }
+  } catch (err) {
+    console.warn("PDFParse extraction error, falling back to stream regex:", err);
+  }
+
+  // 2. Pure JS stream regex fallback
+  try {
+    const content = buffer.toString("latin1");
+    let extracted = "";
+    const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+    let match: RegExpExecArray | null;
+    while ((match = streamRegex.exec(content)) !== null) {
+      const stream = match[1];
+      const btRegex = /BT[\r\n\s]+([\s\S]*?)[\r\n\s]+ET/g;
+      let btMatch: RegExpExecArray | null;
+      while ((btMatch = btRegex.exec(stream)) !== null) {
+        const btBlock = btMatch[1];
+        const tjRegex = /\(([^)]+)\)\s*Tj/g;
+        let tjMatch: RegExpExecArray | null;
+        while ((tjMatch = tjRegex.exec(btBlock)) !== null) {
+          extracted += tjMatch[1] + " ";
+        }
+        const tjArrRegex = /\[([^\]]+)\]\s*TJ/g;
+        let arrMatch: RegExpExecArray | null;
+        while ((arrMatch = tjArrRegex.exec(btBlock)) !== null) {
+          const strRegex = /\(([^)]+)\)/g;
+          let sMatch: RegExpExecArray | null;
+          while ((sMatch = strRegex.exec(arrMatch[1])) !== null) {
+            extracted += sMatch[1];
+          }
+          extracted += " ";
+        }
+      }
+    }
+    if (extracted.trim().length >= 30) {
+      return extracted.trim();
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return "";
+}
+
+function normalizeSyllabusData(raw: any, fallbackName = "Syllabus"): { subjectName: string; units: Array<{ name: string; topics: string[] }> } {
+  if (!raw) return { subjectName: fallbackName, units: [] };
+
+  let unitsRaw: any[] = [];
+  let subjectName = fallbackName;
+
+  if (Array.isArray(raw)) {
+    unitsRaw = raw;
+  } else if (typeof raw === "object") {
+    subjectName = 
+      raw.subjectName ||
+      raw.subject ||
+      raw.courseName ||
+      raw.courseTitle ||
+      raw.course ||
+      raw.title ||
+      raw.name ||
+      fallbackName;
+
+    if (Array.isArray(raw.units)) {
+      unitsRaw = raw.units;
+    } else if (Array.isArray(raw.modules)) {
+      unitsRaw = raw.modules;
+    } else if (Array.isArray(raw.chapters)) {
+      unitsRaw = raw.chapters;
+    } else if (Array.isArray(raw.sections)) {
+      unitsRaw = raw.sections;
+    } else if (Array.isArray(raw.syllabus)) {
+      unitsRaw = raw.syllabus;
+    } else if (Array.isArray(raw.curriculum)) {
+      unitsRaw = raw.curriculum;
+    } else {
+      for (const key of Object.keys(raw)) {
+        if (Array.isArray(raw[key]) && raw[key].length > 0) {
+          unitsRaw = raw[key];
+          if (subjectName === fallbackName && key !== "units") {
+            subjectName = key;
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  const normalizedUnits = unitsRaw.map((u: any, idx: number) => {
+    if (typeof u === "string") {
+      return {
+        name: `Unit ${idx + 1}: ${u}`,
+        topics: [u]
+      };
+    }
+
+    const unitNum = u.unitNumber || u.unit || u.number || (idx + 1);
+    const unitTitle = u.name || u.title || u.unitName || u.moduleName || u.chapterName || u.sectionName || "";
+    const cleanUnitName = unitTitle.toLowerCase().includes("unit") || unitTitle.toLowerCase().includes("module") || unitTitle.toLowerCase().includes("chapter")
+      ? unitTitle
+      : `Unit ${unitNum}: ${unitTitle || "General Topics"}`;
+
+    let rawTopics = u.topics || u.subtopics || u.subTopics || u.concepts || u.items || u.chapters || u.content || [];
+    if (!Array.isArray(rawTopics)) {
+      if (typeof rawTopics === "string") {
+        rawTopics = rawTopics.split(/[\n,;•-]+/).map(s => s.trim()).filter(Boolean);
+      } else {
+        rawTopics = [];
+      }
+    }
+
+    const cleanTopics = rawTopics
+      .map((t: any) => {
+        if (typeof t === "string") return t.trim();
+        if (t && typeof t === "object") {
+          return (t.name || t.title || t.topic || t.topicName || t.concept || t.item || JSON.stringify(t)).trim();
+        }
+        return String(t).trim();
+      })
+      .filter((t: string) => t.length > 0);
+
+    return {
+      name: cleanUnitName.trim(),
+      topics: cleanTopics.length > 0 ? cleanTopics : ["Key Concepts & Fundamentals"]
+    };
+  }).filter(u => u.name && u.topics.length > 0);
+
+  return {
+    subjectName: (subjectName || fallbackName).trim(),
+    units: normalizedUnits
+  };
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -248,13 +389,13 @@ async function startServer() {
       const ai = getAIClient();
       let contents: any[] = [];
 
-      const prompt = `You are an expert academic curriculum assistant. Parse the provided syllabus document completely and extract ALL Units, Modules, Chapters, and Topics into a highly structured JSON format.
+      const prompt = `You are an expert academic curriculum assistant. Parse the provided syllabus document completely and organize ALL Units, Modules, Chapters, and Topics into a highly structured JSON format.
 Analyze the ENTIRE document thoroughly across all pages. Do NOT stop after the first unit or skip any sections.
 Extract every single Unit/Module/Chapter (e.g. Unit 1, Unit 2, Unit 3, Unit 4, Unit 5, etc.) and all corresponding sub-topics under each unit.
-Group the topics logically under their respective Units. If there are no clear units, group them under logical sections, chapters, or modules.
+Group the topics logically under their respective Units. If there are no explicit units, create logical units based on the subject's major chapters or themes.
 Keep the unit names descriptive (e.g. "Unit 1: Digital Fundamentals"), and keep each topic short, clear, and action-oriented (maximum 10 words per topic).
 
-Return ONLY a JSON object with this exact typescript structure:
+Return ONLY a JSON object with this exact structure:
 {
   "subjectName": string, // Name of the course/subject, e.g. "Digital Electronics"
   "units": Array<{
@@ -266,61 +407,41 @@ Return ONLY a JSON object with this exact typescript structure:
 Ensure the response contains no markdown block characters (like \`\`\`json) and is valid, pure JSON.`;
 
       if (pdfBase64) {
-        // Clean base64 string
         const cleanBase64 = pdfBase64.replace(/^data:[^;]+;base64,/, "");
-        contents = [
-          {
-            inlineData: {
-              mimeType: mimeType || "application/pdf",
-              data: cleanBase64
-            }
-          },
-          { text: prompt }
-        ];
+        const pdfBuffer = Buffer.from(cleanBase64, "base64");
+        
+        // Attempt text extraction from the PDF first
+        const extractedText = await extractTextFromPdfBuffer(pdfBuffer);
+        if (extractedText && extractedText.length >= 30) {
+          console.log(`Extracted ${extractedText.length} characters of text from PDF. Parsing text with Gemini...`);
+          contents = [
+            `Syllabus Document Text:\n${extractedText}\n\n${prompt}`
+          ];
+        } else {
+          console.log("PDF contains little or no text streams (likely scanned). Passing raw PDF to Gemini vision OCR...");
+          contents = [
+            {
+              inlineData: {
+                mimeType: mimeType || "application/pdf",
+                data: cleanBase64
+              }
+            },
+            { text: prompt }
+          ];
+        }
       } else {
         contents = [
           `Syllabus Copy-Pasted Text:\n${syllabusText}\n\n${prompt}`
         ];
       }
 
-      console.log("Parsing syllabus using Google Gemini flash-latest...");
+      console.log("Parsing syllabus using Google Gemini with structured JSON output...");
       const response = await generateContentWithRetry(ai, {
-        model: 'gemini-flash-latest',
+        model: 'gemini-3.8-flash',
         contents,
         config: {
           maxOutputTokens: 8192,
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              subjectName: {
-                type: Type.STRING,
-                description: "Name of the course/subject, e.g. 'Data Structures & Algorithms'"
-              },
-              units: {
-                type: Type.ARRAY,
-                description: "List of academic units or chapters in the syllabus",
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    name: {
-                      type: Type.STRING,
-                      description: "Name of the unit, e.g. 'Unit 1: Introduction'"
-                    },
-                    topics: {
-                      type: Type.ARRAY,
-                      description: "Distinct short topic names to learn within this unit (under 10 words per topic)",
-                      items: {
-                        type: Type.STRING
-                      }
-                    }
-                  },
-                  required: ["name", "topics"]
-                }
-              }
-            },
-            required: ["subjectName", "units"]
-          }
+          responseMimeType: 'application/json'
         }
       });
 
@@ -335,7 +456,9 @@ Ensure the response contains no markdown block characters (like \`\`\`json) and 
         });
       }
 
-      res.json(parsedData);
+      const normalized = normalizeSyllabusData(parsedData, "Syllabus Course");
+      console.log(`Successfully parsed syllabus: "${normalized.subjectName}" with ${normalized.units.length} units.`);
+      res.json(normalized);
     } catch (error: any) {
       console.error("Error in parse-syllabus endpoint:", error);
       res.status(500).json({ 
