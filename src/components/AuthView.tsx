@@ -101,7 +101,7 @@ export default function AuthView({ onShowLanding }: AuthViewProps) {
                   logoImage: "hidden",
                   headerSubtitle: "hidden",
                 },
-              }}
+              } as any}
             />
           ) : (
             <SignUp 
@@ -128,7 +128,7 @@ export default function AuthView({ onShowLanding }: AuthViewProps) {
                   logoImage: "hidden",
                   headerSubtitle: "hidden",
                 },
-              }}
+              } as any}
             />
           )}
         </motion.div>

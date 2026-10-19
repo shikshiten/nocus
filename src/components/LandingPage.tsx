@@ -306,7 +306,7 @@ export default function LandingPage() {
                         logoImage: "hidden",
                         headerSubtitle: "hidden",
                       },
-                    }}
+                    } as any}
                   />
                 ) : (
                   <SignUp 
@@ -333,7 +333,7 @@ export default function LandingPage() {
                         logoImage: "hidden",
                         headerSubtitle: "hidden",
                       },
-                    }}
+                    } as any}
                   />
                 )}
               </div>

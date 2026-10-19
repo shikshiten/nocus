@@ -8,12 +8,13 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } fro
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import dotenv from "dotenv";
 import { createClient as createTursoClient } from "@libsql/client/web";
-import { createClerkClient } from "@clerk/backend";
+import { createClerkClient, verifyToken } from "@clerk/backend";
 
 dotenv.config();
 
 const clerkSecret = (process.env.CLERK_SECRET_KEY || "").trim();
 const clerkBackend = clerkSecret ? createClerkClient({ secretKey: clerkSecret }) : null;
+
 
 // Lazy initialization of the OpenAI client
 let openaiClient: OpenAI | null = null;
@@ -416,9 +417,9 @@ async function startServer() {
     const token = authHeader.split(" ")[1];
     if (!token) return null;
 
-    if (clerkBackend) {
+    if (clerkSecret) {
       try {
-        const decoded = await clerkBackend.verifyToken(token);
+        const decoded = await verifyToken(token, { secretKey: clerkSecret });
         if (decoded && decoded.sub) {
           return decoded.sub;
         }
@@ -1055,20 +1056,20 @@ Example format:
   });
 
   // Turso Database Client (Server-side only)
-  const defaultTursoUrl = "https://nocus-shikshiten.aws-ap-south-1.turso.io";
-  const defaultTursoToken = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJnaWQiOiJhZTI2ZTkxYy0yZWIzLTQzOTctYTFmOS1jNDhiMzg4MzYzZGMiLCJpYXQiOjE3OTIwMDMxNzUsImtpZCI6ImFId2pRZzFWQ1ZLejB6OW55MVprRDhrYUR4UkhlOG1Ca2YwTkRQQnpTZGsiLCJyaWQiOiI1ZGU0ZjYwNy1hNTIxLTQ1ODktYTU2Mi01ZDU1N2Y4MGJlZjUifQ.g-_w5JnSYEI8F4sGpd71lfruwV4mMiJiOmGScpOzt1BEeRQdeh4mbkJFINICEwYlugWV0Wn3eeXbBeXa69FQCw";
-  const rawTursoUrl = (process.env.TURSO_DATABASE_URL || process.env.VITE_TURSO_DATABASE_URL || defaultTursoUrl).trim();
+  const rawTursoUrl = (process.env.TURSO_DATABASE_URL || "").trim();
   const tursoHttpUrl = rawTursoUrl.replace(/^libsql:\/\//, "https://");
-  const tursoToken = (process.env.TURSO_AUTH_TOKEN || process.env.VITE_TURSO_AUTH_TOKEN || defaultTursoToken).trim();
+  const tursoToken = (process.env.TURSO_AUTH_TOKEN || "").trim();
 
   let tursoClient: any = null;
-  try {
-    tursoClient = createTursoClient({
-      url: tursoHttpUrl,
-      authToken: tursoToken,
-    });
-  } catch (err) {
-    console.warn("Failed to initialize Turso client in server.ts:", err);
+  if (tursoHttpUrl && tursoToken) {
+    try {
+      tursoClient = createTursoClient({
+        url: tursoHttpUrl,
+        authToken: tursoToken,
+      });
+    } catch (err) {
+      console.warn("Failed to initialize Turso client in server.ts:", err);
+    }
   }
 
   // Ensure Turso tables exist

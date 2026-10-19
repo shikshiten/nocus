@@ -5,16 +5,29 @@ import { createClient } from "@libsql/client/web";
 
 export interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> };
+  TURSO_DATABASE_URL?: string;
+  TURSO_AUTH_TOKEN?: string;
+  CLERK_SECRET_KEY?: string;
+  CLERK_PUBLISHABLE_KEY?: string;
   OPENAI_API_KEY?: string;
   GEMINI_API_KEY?: string;
   R2_ACCOUNT_ID?: string;
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
   R2_BUCKET_NAME?: string;
-  TURSO_DATABASE_URL?: string;
-  TURSO_AUTH_TOKEN?: string;
-  CLERK_SECRET_KEY?: string;
-  CLERK_PUBLISHABLE_KEY?: string;
+  R2_PUBLIC_URL?: string;
+  ALLOWED_ORIGINS?: string;
+}
+
+function checkRequiredEnv(env: Env, requiredKeys: (keyof Env)[]): string | null {
+  for (const key of requiredKeys) {
+    const val = env[key];
+    if (!val || (typeof val === "string" && !val.trim())) {
+      console.error(`Missing required environment variable: ${String(key)}`);
+      return String(key);
+    }
+  }
+  return null;
 }
 
 function parseWorkerAuth(request: Request): string | null {
@@ -35,17 +48,19 @@ function parseWorkerAuth(request: Request): string | null {
 }
 
 function getWorkerTursoClient(env: Env) {
-  const rawUrl = (env.TURSO_DATABASE_URL || (typeof process !== "undefined" ? process.env?.TURSO_DATABASE_URL : "") || "").trim();
-  const tursoUrl = rawUrl.replace(/^libsql:\/\//, "https://");
-  const tursoAuthToken = (env.TURSO_AUTH_TOKEN || (typeof process !== "undefined" ? process.env?.TURSO_AUTH_TOKEN : "") || "").trim();
+  const missing = checkRequiredEnv(env, ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"]);
+  if (missing) return null;
 
-  if (!tursoUrl || !tursoAuthToken) return null;
+  const rawUrl = (env.TURSO_DATABASE_URL || "").trim();
+  const tursoUrl = rawUrl.replace(/^libsql:\/\//, "https://");
+  const tursoAuthToken = (env.TURSO_AUTH_TOKEN || "").trim();
 
   return createClient({
     url: tursoUrl,
     authToken: tursoAuthToken,
   });
 }
+
 
 
 function corsHeaders(): HeadersInit {
@@ -67,7 +82,7 @@ function jsonResponse(data: any, status = 200): Response {
 }
 
 function getGeminiClient(env: Env): GoogleGenAI | null {
-  const key = (env.GEMINI_API_KEY || (typeof process !== "undefined" ? process.env?.GEMINI_API_KEY : "") || "").trim();
+  const key = (env.GEMINI_API_KEY || "").trim();
   if (!key) return null;
   try {
     return new GoogleGenAI({ apiKey: key });

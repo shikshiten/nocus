@@ -1,15 +1,7 @@
 import { createClient } from "@libsql/client/web";
-import { createClerkClient } from "@clerk/backend";
+import { verifyToken } from "@clerk/backend";
 
-const clerkPublishableKey = (process.env.VITE_CLERK_PUBLISHABLE_KEY || process.env.CLERK_PUBLISHABLE_KEY || "").trim();
 const clerkSecretKey = (process.env.CLERK_SECRET_KEY || "").trim();
-
-const clerkClient = (clerkPublishableKey || clerkSecretKey)
-  ? createClerkClient({
-      publishableKey: clerkPublishableKey,
-      secretKey: clerkSecretKey,
-    })
-  : null;
 
 async function authenticateUser(req: any): Promise<string | null> {
   const authHeader = req.headers?.authorization || req.headers?.Authorization;
@@ -19,9 +11,9 @@ async function authenticateUser(req: any): Promise<string | null> {
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
   if (!token) return null;
 
-  if (clerkClient) {
+  if (clerkSecretKey) {
     try {
-      const verified = await clerkClient.verifyToken(token);
+      const verified = await verifyToken(token, { secretKey: clerkSecretKey });
       return verified.sub || null;
     } catch (err) {
       console.error("Clerk token verification failed in api/sync-syllabuses:", err);
