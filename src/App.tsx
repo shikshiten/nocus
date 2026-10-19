@@ -101,8 +101,29 @@ export default function App() {
         },
       }
     : null;
-  const [syllabuses, setSyllabuses] = useState<Syllabus[]>([]);
-  const [currentSyllabus, setCurrentSyllabus] = useState<Syllabus | null>(null);
+  const [syllabuses, setSyllabuses] = useState<Syllabus[]>(() => {
+    try {
+      const saved = localStorage.getItem("syllabuses");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  const [currentSyllabus, setCurrentSyllabus] = useState<Syllabus | null>(() => {
+    try {
+      const savedList = localStorage.getItem("syllabuses");
+      const savedActiveId = localStorage.getItem("activeSyllabusId");
+      if (savedList) {
+        const list = JSON.parse(savedList);
+        if (Array.isArray(list) && list.length > 0) {
+          return list.find((s: any) => s.id === savedActiveId) || list[0] || null;
+        }
+      }
+    } catch {}
+    return null;
+  });
   const [isAddingCourse, setIsAddingCourse] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -1184,37 +1205,52 @@ export default function App() {
 
 
 
-  // Load syllabuses from Turso
+  // Load syllabuses from Turso with indestructible localStorage backup
   const loadSyllabusesFromDatabase = async (uid: string) => {
     try {
       setSyncing(true);
-      const list = await loadUserSyllabusesFromTurso(uid);
-      setSyllabuses(list);
+      const tursoList = await loadUserSyllabusesFromTurso(uid);
 
-      const savedActiveId = localStorage.getItem("activeSyllabusId");
-      const active = list.find(s => s.id === savedActiveId) || list[0] || null;
-      setCurrentSyllabus(active);
+      // Retrieve cached local syllabuses
+      let localList: Syllabus[] = [];
+      try {
+        const localLegacyListStr = localStorage.getItem("syllabuses");
+        if (localLegacyListStr) {
+          localList = JSON.parse(localLegacyListStr);
+        }
+      } catch {}
 
-      // Migrate any legacy local syllabuses to user's Turso account
-      const localLegacyListStr = localStorage.getItem("syllabuses");
-
-      if (localLegacyListStr) {
-        try {
-          const localList = JSON.parse(localLegacyListStr) as Syllabus[];
-          for (const item of localList) {
-            const migrated: Syllabus = { ...item, userId: uid };
-            await syncSyllabusToTurso(migrated, uid);
-            if (!list.some(s => s.id === item.id)) {
-              list.push(migrated);
-            }
+      if (tursoList && tursoList.length > 0) {
+        // Merge Turso list with any local items
+        const mergedMap = new Map<string, Syllabus>();
+        for (const item of tursoList) {
+          mergedMap.set(item.id, item);
+        }
+        for (const item of localList) {
+          if (!mergedMap.has(item.id)) {
+            mergedMap.set(item.id, { ...item, userId: uid });
+            syncSyllabusToTurso({ ...item, userId: uid }, uid).catch(() => {});
           }
-          list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setSyllabuses([...list]);
-          const activeAfterMigration = list.find(s => s.id === savedActiveId) || list[0] || null;
-          setCurrentSyllabus(activeAfterMigration);
-          localStorage.removeItem("syllabuses");
-        } catch (e) {
-          console.error("Migration error:", e);
+        }
+        const mergedList = Array.from(mergedMap.values());
+        mergedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setSyllabuses(mergedList);
+        localStorage.setItem("syllabuses", JSON.stringify(mergedList));
+
+        const savedActiveId = localStorage.getItem("activeSyllabusId");
+        const active = mergedList.find(s => s.id === savedActiveId) || mergedList[0] || null;
+        setCurrentSyllabus(active);
+      } else if (localList && localList.length > 0) {
+        // Turso returned empty (e.g. offline, initial cloud sync, or connection glitch):
+        // NEVER WIPE LOCAL DATA! Keep local data and sync it up to Turso!
+        setSyllabuses(localList);
+        const savedActiveId = localStorage.getItem("activeSyllabusId");
+        const active = localList.find(s => s.id === savedActiveId) || localList[0] || null;
+        setCurrentSyllabus(active);
+
+        // Upload local items to Turso so they persist in cloud
+        for (const item of localList) {
+          syncSyllabusToTurso({ ...item, userId: uid }, uid).catch(() => {});
         }
       }
     } catch (err) {
@@ -1354,10 +1390,8 @@ export default function App() {
   const saveSyllabus = async (syllabus: Syllabus) => {
     try {
       setSyncing(true);
-      if (user) {
-        await syncSyllabusToTurso(syllabus, user.id);
-      }
 
+      // 1. Immediately persist to React state & LocalStorage
       setSyllabuses(prev => {
         const list = prev.map(s => s.id === syllabus.id ? syllabus : s);
         if (!list.some(s => s.id === syllabus.id)) {
@@ -1366,6 +1400,12 @@ export default function App() {
         localStorage.setItem("syllabuses", JSON.stringify(list));
         return list;
       });
+      localStorage.setItem("activeSyllabusId", syllabus.id);
+
+      // 2. Persist to Turso Cloud
+      if (user) {
+        await syncSyllabusToTurso(syllabus, user.id);
+      }
     } catch (err) {
       console.error("Error saving syllabus:", err);
     } finally {
@@ -1415,9 +1455,17 @@ export default function App() {
       streak: 0,
     };
 
-    setSyllabuses(prev => [newSyllabus, ...prev]);
-    setCurrentSyllabus(newSyllabus);
+    const currentListStr = localStorage.getItem("syllabuses");
+    let currentList: Syllabus[] = [];
+    try {
+      if (currentListStr) currentList = JSON.parse(currentListStr);
+    } catch {}
+    const updatedList = [newSyllabus, ...currentList.filter(s => s.id !== newSyllabus.id)];
+    localStorage.setItem("syllabuses", JSON.stringify(updatedList));
     localStorage.setItem("activeSyllabusId", newSyllabus.id);
+
+    setSyllabuses(updatedList);
+    setCurrentSyllabus(newSyllabus);
     setIsAddingCourse(false); // Reset add mode state
     setUploadState({
       loading: false,
