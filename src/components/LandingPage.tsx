@@ -29,6 +29,7 @@ import {
   StaggerItem,
   MOTION_CONFIG,
 } from "./motion";
+import GlassFolder from "./ui/glass-folder-cards";
 
 export default function LandingPage() {
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -640,6 +641,79 @@ export default function LandingPage() {
               );
             })}
           </StaggerGroup>
+
+          {/* Interactive Glass Folder Study Vault Showcase */}
+          <Reveal delay={0.12}>
+            <div className="pt-8 sm:pt-14 space-y-6">
+              <div className="text-center max-w-xl mx-auto space-y-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 font-mono">
+                  LIVE INTERACTIVE VAULT PREVIEW
+                </span>
+                <h3 className="text-xl sm:text-3xl font-black text-white tracking-tight">
+                  Organize study materials like physical folders
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-medium">
+                  Frosted glass folders that lean on hover, fan out lecture sheets, and let you inspect study files with fluid physics.
+                </p>
+              </div>
+
+              <div className="relative flex w-full flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-white/[0.04] to-transparent p-4 sm:p-8 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-sm">
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 text-white opacity-[0.06]"
+                  style={{
+                    backgroundImage: "radial-gradient(currentColor 1.1px, transparent 1.4px)",
+                    backgroundSize: "22px 22px",
+                  }}
+                />
+                <div className="relative grid max-w-[1180px] w-full grid-cols-1 items-end justify-items-center gap-x-10 gap-y-12 md:grid-cols-2 xl:grid-cols-3 z-10">
+                  <GlassFolder
+                    label="Computer Networks"
+                    art="aurora"
+                    seed={3}
+                    appearDelay={0}
+                    files={[
+                      { name: "Unit 2: Transport Protocols.pdf", meta: "PDF · 2.4 MB" },
+                      { name: "Subnetting Cheat Sheet", meta: "PNG · 1.8 MB", art: "ember" },
+                      { name: "Midterm Revision Notes.pdf", meta: "PDF · 940 KB" },
+                    ]}
+                  />
+                  <GlassFolder
+                    label="Course Vault"
+                    art="none"
+                    action="more"
+                    labelPlacement="top-left"
+                    appearDelay={140}
+                    files={[
+                      { name: "Calculus Formula Book", meta: "PDF · 3.1 MB", art: "dusk" },
+                      { name: "Assignment 4 Solutions", meta: "PDF · 820 KB" },
+                      { name: "Lab Manual & Code", meta: "ZIP · 4.2 MB", art: "ember" },
+                      { name: "Course Syllabus 2026.pdf", meta: "PDF · 410 KB" },
+                    ]}
+                    menu={[{ label: "Rename Folder" }, { label: "Export All PDFs" }, { label: "Move to Trash", danger: true }]}
+                  />
+                  <GlassFolder
+                    label="Study Archives"
+                    meta="Updated Today"
+                    tone="dark"
+                    art="ember"
+                    seed={11}
+                    action="add"
+                    labelPlacement="top-right"
+                    appearDelay={280}
+                    files={[
+                      { name: "Previous Year Questions", meta: "28 items", art: "verdant" },
+                      { name: "Viva Preparation Guide", meta: "PDF · 1.2 MB" },
+                      { name: "Mind Maps & Diagrams", meta: "IMG · 8.4 MB", art: "glacier" },
+                    ]}
+                  />
+                </div>
+                <p className="relative mt-8 font-mono text-[10px] sm:text-[11px] tracking-[0.18em] text-slate-400 uppercase text-center select-none z-10">
+                  Hover to lean · Tap or click to open · + to add notes
+                </p>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
