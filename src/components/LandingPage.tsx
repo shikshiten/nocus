@@ -199,31 +199,30 @@ export default function LandingPage() {
       {/* Top Fixed Reading Progress Indicator */}
       <ScrollProgressBar />
 
-      {/* Decorative Glow Background Spheres with Depth Parallax (GPU-optimized radial gradients) */}
-      <motion.div
-        className="absolute top-[-8%] left-[-10%] w-[55vw] h-[55vw] max-w-[750px] max-h-[750px] rounded-full pointer-events-none will-change-transform"
-        style={{
-          background: "radial-gradient(circle, rgba(124, 58, 237, 0.13) 0%, rgba(79, 70, 229, 0.04) 50%, transparent 70%)",
-          ...(shouldReduceMotion ? {} : { y: blob1Y }),
-        }}
-        aria-hidden="true"
-      />
-      <motion.div
-        className="absolute top-[22%] right-[-10%] w-[48vw] h-[48vw] max-w-[650px] max-h-[650px] rounded-full pointer-events-none will-change-transform"
-        style={{
-          background: "radial-gradient(circle, rgba(79, 70, 229, 0.13) 0%, rgba(147, 51, 234, 0.04) 50%, transparent 70%)",
-          ...(shouldReduceMotion ? {} : { y: blob2Y }),
-        }}
-        aria-hidden="true"
-      />
-      <motion.div
-        className="absolute bottom-[-10%] left-[20%] w-[42vw] h-[42vw] max-w-[600px] max-h-[600px] rounded-full pointer-events-none will-change-transform"
-        style={{
-          background: "radial-gradient(circle, rgba(168, 85, 247, 0.11) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%)",
-          ...(shouldReduceMotion ? {} : { y: blob3Y }),
-        }}
-        aria-hidden="true"
-      />
+      {/* Decorative Glow Background Spheres with Depth Parallax (contained to prevent phantom scroll space) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-0" aria-hidden="true">
+        <motion.div
+          className="absolute top-[-8%] left-[-10%] w-[55vw] h-[55vw] max-w-[750px] max-h-[750px] rounded-full will-change-transform"
+          style={{
+            background: "radial-gradient(circle, rgba(124, 58, 237, 0.13) 0%, rgba(79, 70, 229, 0.04) 50%, transparent 70%)",
+            ...(shouldReduceMotion ? {} : { y: blob1Y }),
+          }}
+        />
+        <motion.div
+          className="absolute top-[22%] right-[-10%] w-[48vw] h-[48vw] max-w-[650px] max-h-[650px] rounded-full will-change-transform"
+          style={{
+            background: "radial-gradient(circle, rgba(79, 70, 229, 0.13) 0%, rgba(147, 51, 234, 0.04) 50%, transparent 70%)",
+            ...(shouldReduceMotion ? {} : { y: blob2Y }),
+          }}
+        />
+        <motion.div
+          className="absolute bottom-[2%] left-[20%] w-[42vw] h-[42vw] max-w-[600px] max-h-[600px] rounded-full will-change-transform"
+          style={{
+            background: "radial-gradient(circle, rgba(168, 85, 247, 0.11) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%)",
+            ...(shouldReduceMotion ? {} : { y: blob3Y }),
+          }}
+        />
+      </div>
 
       {/* Sticky Header Navigation */}
       <header
