@@ -11,7 +11,42 @@ export interface Env {
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
   R2_BUCKET_NAME?: string;
+  TURSO_DATABASE_URL?: string;
+  TURSO_AUTH_TOKEN?: string;
+  CLERK_SECRET_KEY?: string;
+  CLERK_PUBLISHABLE_KEY?: string;
 }
+
+function parseWorkerAuth(request: Request): string | null {
+  const authHeader = request.headers.get("authorization") || request.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (payload.exp && Date.now() >= payload.exp * 1000) {
+      return null;
+    }
+    return payload.sub || null;
+  } catch {
+    return null;
+  }
+}
+
+function getWorkerTursoClient(env: Env) {
+  const rawUrl = (env.TURSO_DATABASE_URL || (typeof process !== "undefined" ? process.env?.TURSO_DATABASE_URL : "") || "").trim();
+  const tursoUrl = rawUrl.replace(/^libsql:\/\//, "https://");
+  const tursoAuthToken = (env.TURSO_AUTH_TOKEN || (typeof process !== "undefined" ? process.env?.TURSO_AUTH_TOKEN : "") || "").trim();
+
+  if (!tursoUrl || !tursoAuthToken) return null;
+
+  return createClient({
+    url: tursoUrl,
+    authToken: tursoAuthToken,
+  });
+}
+
 
 function corsHeaders(): HeadersInit {
   return {
@@ -227,81 +262,303 @@ export default {
 
     // Turso Live Cloud Sync Endpoint
     if (url.pathname === "/api/sync-syllabuses") {
-      const defaultTursoUrl = "https://nocus-shikshiten.aws-ap-south-1.turso.io";
-      const defaultTursoToken = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJnaWQiOiJhZTI2ZTkxYy0yZWIzLTQzOTctYTFmOS1jNDhiMzg4MzYzZGMiLCJpYXQiOjE3OTIwMDMxNzUsImtpZCI6ImFId2pRZzFWQ1ZLejB6OW55MVprRDhrYUR4UkhlOG1Ca2YwTkRQQnpTZGsiLCJyaWQiOiI1ZGU0ZjYwNy1hNTIxLTQ1ODktYTU2Mi01ZDU1N2Y4MGJlZjUifQ.g-_w5JnSYEI8F4sGpd71lfruwV4mMiJiOmGScpOzt1BEeRQdeh4mbkJFINICEwYlugWV0Wn3eeXbBeXa69FQCw";
-      const tursoClient = createClient({
-        url: defaultTursoUrl,
-        authToken: defaultTursoToken,
-      });
+      const tursoClient = getWorkerTursoClient(env);
+      if (!tursoClient) {
+        return jsonResponse({ error: "Database service unavailable." }, 503);
+      }
+
+      const verifiedUserId = parseWorkerAuth(request);
 
       if (request.method === "GET") {
-        const userId = url.searchParams.get("userId");
-        if (!userId) return jsonResponse({ error: "userId required" }, 400);
-        const res = await tursoClient.execute({
-          sql: "SELECT * FROM syllabuses WHERE user_id = ? ORDER BY created_at DESC",
-          args: [userId],
-        });
-        const syllabuses = res.rows.map((row: any) => ({
-          id: String(row.id),
-          userId: String(row.user_id),
-          subjectName: String(row.subject_name),
-          units: typeof row.units === "string" ? JSON.parse(row.units) : row.units || [],
-          examDate: row.exam_date ? String(row.exam_date) : undefined,
-          dailyTarget: row.daily_target ? Number(row.daily_target) : 4,
-          streak: row.streak ? Number(row.streak) : 0,
-          lastStudyDate: row.last_study_date ? String(row.last_study_date) : undefined,
-          keepNotes: typeof row.keep_notes === "string" ? JSON.parse(row.keep_notes) : row.keep_notes || [],
-          plannedTopicsToday: typeof row.planned_topics_today === "string" ? JSON.parse(row.planned_topics_today) : row.planned_topics_today || [],
-          createdAt: row.created_at ? String(row.created_at) : new Date().toISOString(),
-        }));
-        return jsonResponse({ syllabuses });
+        const paramUserId = url.searchParams.get("userId");
+        const targetUserId = verifiedUserId || paramUserId;
+        if (!targetUserId) return jsonResponse({ error: "userId required" }, 400);
+
+        if (verifiedUserId && paramUserId && verifiedUserId !== paramUserId) {
+          return jsonResponse({ error: "Forbidden: Cannot access another user's syllabus" }, 403);
+        }
+
+        try {
+          const res = await tursoClient.execute({
+            sql: "SELECT * FROM syllabuses WHERE user_id = ? ORDER BY created_at DESC",
+            args: [targetUserId],
+          });
+          const syllabuses = res.rows.map((row: any) => ({
+            id: String(row.id),
+            userId: String(row.user_id),
+            subjectName: String(row.subject_name),
+            units: typeof row.units === "string" ? JSON.parse(row.units) : row.units || [],
+            examDate: row.exam_date ? String(row.exam_date) : undefined,
+            dailyTarget: row.daily_target ? Number(row.daily_target) : 4,
+            streak: row.streak ? Number(row.streak) : 0,
+            lastStudyDate: row.last_study_date ? String(row.last_study_date) : undefined,
+            keepNotes: typeof row.keep_notes === "string" ? JSON.parse(row.keep_notes) : row.keep_notes || [],
+            plannedTopicsToday: typeof row.planned_topics_today === "string" ? JSON.parse(row.planned_topics_today) : row.planned_topics_today || [],
+            createdAt: row.created_at ? String(row.created_at) : new Date().toISOString(),
+          }));
+          return jsonResponse({ syllabuses });
+        } catch (err) {
+          console.error("Worker sync get error:", err);
+          return jsonResponse({ error: "Database operation failed" }, 500);
+        }
       }
 
       if (request.method === "POST") {
         const body: any = await request.json().catch(() => ({}));
         const { syllabus, userId } = body;
-        if (!syllabus || !userId) return jsonResponse({ error: "syllabus and userId required" }, 400);
-        await tursoClient.execute({
-          sql: `INSERT INTO syllabuses (id, user_id, subject_name, exam_date, daily_target, streak, last_study_date, units, keep_notes, planned_topics_today, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                subject_name = excluded.subject_name,
-                exam_date = excluded.exam_date,
-                daily_target = excluded.daily_target,
-                streak = excluded.streak,
-                last_study_date = excluded.last_study_date,
-                units = excluded.units,
-                keep_notes = excluded.keep_notes,
-                planned_topics_today = excluded.planned_topics_today,
-                updated_at = CURRENT_TIMESTAMP`,
-          args: [
-            syllabus.id,
-            userId,
-            syllabus.subjectName,
-            syllabus.examDate || null,
-            syllabus.dailyTarget || 4,
-            syllabus.streak || 0,
-            syllabus.lastStudyDate || null,
-            JSON.stringify(syllabus.units || []),
-            JSON.stringify(syllabus.keepNotes || []),
-            JSON.stringify(syllabus.plannedTopicsToday || []),
-            syllabus.createdAt || new Date().toISOString(),
-          ],
-        });
-        return jsonResponse({ success: true });
+        const targetUserId = verifiedUserId || userId;
+        if (!syllabus || !targetUserId) return jsonResponse({ error: "syllabus and userId required" }, 400);
+
+        if (verifiedUserId && userId && verifiedUserId !== userId) {
+          return jsonResponse({ error: "Forbidden: Cannot save syllabus for another user" }, 403);
+        }
+
+        try {
+          await tursoClient.execute({
+            sql: `INSERT INTO syllabuses (id, user_id, subject_name, exam_date, daily_target, streak, last_study_date, units, keep_notes, planned_topics_today, created_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  ON CONFLICT(id) DO UPDATE SET
+                  subject_name = excluded.subject_name,
+                  exam_date = excluded.exam_date,
+                  daily_target = excluded.daily_target,
+                  streak = excluded.streak,
+                  last_study_date = excluded.last_study_date,
+                  units = excluded.units,
+                  keep_notes = excluded.keep_notes,
+                  planned_topics_today = excluded.planned_topics_today,
+                  updated_at = CURRENT_TIMESTAMP
+                  WHERE syllabuses.user_id = excluded.user_id`,
+            args: [
+              syllabus.id,
+              targetUserId,
+              syllabus.subjectName,
+              syllabus.examDate || null,
+              syllabus.dailyTarget || 4,
+              syllabus.streak || 0,
+              syllabus.lastStudyDate || null,
+              JSON.stringify(syllabus.units || []),
+              JSON.stringify(syllabus.keepNotes || []),
+              JSON.stringify(syllabus.plannedTopicsToday || []),
+              syllabus.createdAt || new Date().toISOString(),
+            ],
+          });
+          return jsonResponse({ success: true });
+        } catch (err) {
+          console.error("Worker sync post error:", err);
+          return jsonResponse({ error: "Database operation failed" }, 500);
+        }
       }
 
       if (request.method === "DELETE") {
         const id = url.searchParams.get("id");
-        const userId = url.searchParams.get("userId");
-        if (!id || !userId) return jsonResponse({ error: "id and userId required" }, 400);
-        await tursoClient.execute({
-          sql: "DELETE FROM syllabuses WHERE id = ? AND user_id = ?",
-          args: [id, userId],
-        });
-        return jsonResponse({ success: true });
+        const paramUserId = url.searchParams.get("userId");
+        const targetUserId = verifiedUserId || paramUserId;
+        if (!id || !targetUserId) return jsonResponse({ error: "id and userId required" }, 400);
+
+        if (verifiedUserId && paramUserId && verifiedUserId !== paramUserId) {
+          return jsonResponse({ error: "Forbidden: Cannot delete another user's syllabus" }, 403);
+        }
+
+        try {
+          await tursoClient.execute({
+            sql: "DELETE FROM syllabuses WHERE id = ? AND user_id = ?",
+            args: [id, targetUserId],
+          });
+          return jsonResponse({ success: true });
+        } catch (err) {
+          console.error("Worker sync delete error:", err);
+          return jsonResponse({ error: "Database operation failed" }, 500);
+        }
       }
     }
+
+    // Vault Files CRUD
+    if (url.pathname === "/api/vault/files") {
+      const tursoClient = getWorkerTursoClient(env);
+      if (!tursoClient) return jsonResponse({ error: "Database service unavailable." }, 503);
+      const verifiedUserId = parseWorkerAuth(request);
+
+      if (request.method === "GET") {
+        const paramUserId = url.searchParams.get("userId");
+        const targetUserId = verifiedUserId || paramUserId;
+        if (!targetUserId) return jsonResponse({ error: "userId required" }, 400);
+        if (verifiedUserId && paramUserId && verifiedUserId !== paramUserId) {
+          return jsonResponse({ error: "Forbidden" }, 403);
+        }
+        try {
+          const res = await tursoClient.execute({
+            sql: "SELECT * FROM vault_files WHERE user_id = ? ORDER BY uploaded_at DESC",
+            args: [targetUserId],
+          });
+          const files = res.rows.map((row: any) => ({
+            id: String(row.id),
+            userId: String(row.user_id),
+            fileName: String(row.file_name),
+            fileKey: String(row.file_key),
+            fileSize: Number(row.file_size || 0),
+            mimeType: String(row.mime_type || "application/pdf"),
+            folder: String(row.folder || "General"),
+            isFavorite: Boolean(row.is_favorite),
+            isTrash: Boolean(row.is_trash),
+            uploadedAt: String(row.uploaded_at),
+          }));
+          return jsonResponse({ files });
+        } catch (err) {
+          console.error("Worker vault get files error:", err);
+          return jsonResponse({ error: "Database operation failed" }, 500);
+        }
+      }
+
+      if (request.method === "POST") {
+        const file = (await request.json().catch(() => ({}))) as any;
+        const targetUserId = verifiedUserId || file?.userId;
+        if (!file || !targetUserId || !file.id || !file.fileName || !file.fileKey) {
+          return jsonResponse({ error: "Invalid file payload" }, 400);
+        }
+        try {
+          await tursoClient.execute({
+            sql: `INSERT INTO vault_files (id, user_id, file_name, file_key, file_size, mime_type, folder, is_favorite, is_trash, uploaded_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  ON CONFLICT(id) DO UPDATE SET
+                  file_name = excluded.file_name,
+                  folder = excluded.folder,
+                  is_favorite = excluded.is_favorite,
+                  is_trash = excluded.is_trash
+                  WHERE vault_files.user_id = excluded.user_id`,
+            args: [
+              file.id,
+              targetUserId,
+              file.fileName,
+              file.fileKey,
+              file.fileSize || 0,
+              file.mimeType || "application/pdf",
+              file.folder || "General",
+              file.isFavorite ? 1 : 0,
+              file.isTrash ? 1 : 0,
+              file.uploadedAt || new Date().toISOString(),
+            ],
+          });
+          return jsonResponse({ success: true });
+        } catch (err) {
+          console.error("Worker vault save file error:", err);
+          return jsonResponse({ error: "Database operation failed" }, 500);
+        }
+      }
+
+      if (request.method === "DELETE") {
+        const id = url.searchParams.get("id");
+        const paramUserId = url.searchParams.get("userId");
+        const targetUserId = verifiedUserId || paramUserId;
+        if (!id || !targetUserId) return jsonResponse({ error: "id and userId required" }, 400);
+        try {
+          await tursoClient.execute({
+            sql: "DELETE FROM vault_files WHERE id = ? AND user_id = ?",
+            args: [id, targetUserId],
+          });
+          return jsonResponse({ success: true });
+        } catch (err) {
+          console.error("Worker vault delete file error:", err);
+          return jsonResponse({ error: "Database operation failed" }, 500);
+        }
+      }
+    }
+
+    if (url.pathname === "/api/vault/folder/rename" && request.method === "PATCH") {
+      const tursoClient = getWorkerTursoClient(env);
+      if (!tursoClient) return jsonResponse({ error: "Database service unavailable." }, 503);
+      const verifiedUserId = parseWorkerAuth(request);
+      const { oldFolder, newFolder, userId } = (await request.json().catch(() => ({}))) as any;
+      const targetUserId = verifiedUserId || userId;
+      if (!targetUserId || !oldFolder || !newFolder) return jsonResponse({ error: "Missing parameters" }, 400);
+
+      try {
+        await tursoClient.execute({
+          sql: "UPDATE vault_files SET folder = ? WHERE folder = ? AND user_id = ?",
+          args: [newFolder, oldFolder, targetUserId],
+        });
+        return jsonResponse({ success: true });
+      } catch (err) {
+        return jsonResponse({ error: "Failed to rename folder" }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/vault/folder" && request.method === "DELETE") {
+      const tursoClient = getWorkerTursoClient(env);
+      if (!tursoClient) return jsonResponse({ error: "Database service unavailable." }, 503);
+      const verifiedUserId = parseWorkerAuth(request);
+      const folder = url.searchParams.get("folder");
+      const paramUserId = url.searchParams.get("userId");
+      const targetUserId = verifiedUserId || paramUserId;
+      if (!folder || !targetUserId) return jsonResponse({ error: "Missing parameters" }, 400);
+
+      try {
+        await tursoClient.execute({
+          sql: "DELETE FROM vault_files WHERE folder = ? AND user_id = ?",
+          args: [folder, targetUserId],
+        });
+        return jsonResponse({ success: true });
+      } catch (err) {
+        return jsonResponse({ error: "Failed to delete folder" }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/vault/file/move" && request.method === "PATCH") {
+      const tursoClient = getWorkerTursoClient(env);
+      if (!tursoClient) return jsonResponse({ error: "Database service unavailable." }, 503);
+      const verifiedUserId = parseWorkerAuth(request);
+      const { id, targetFolder, userId } = (await request.json().catch(() => ({}))) as any;
+      const targetUserId = verifiedUserId || userId;
+      if (!id || !targetFolder || !targetUserId) return jsonResponse({ error: "Missing parameters" }, 400);
+
+      try {
+        await tursoClient.execute({
+          sql: "UPDATE vault_files SET folder = ? WHERE id = ? AND user_id = ?",
+          args: [targetFolder, id, targetUserId],
+        });
+        return jsonResponse({ success: true });
+      } catch (err) {
+        return jsonResponse({ error: "Failed to move file" }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/vault/file/trash" && request.method === "PATCH") {
+      const tursoClient = getWorkerTursoClient(env);
+      if (!tursoClient) return jsonResponse({ error: "Database service unavailable." }, 503);
+      const verifiedUserId = parseWorkerAuth(request);
+      const { id, isTrash, userId } = (await request.json().catch(() => ({}))) as any;
+      const targetUserId = verifiedUserId || userId;
+      if (!id || !targetUserId) return jsonResponse({ error: "Missing parameters" }, 400);
+
+      try {
+        await tursoClient.execute({
+          sql: "UPDATE vault_files SET is_trash = ? WHERE id = ? AND user_id = ?",
+          args: [isTrash ? 1 : 0, id, targetUserId],
+        });
+        return jsonResponse({ success: true });
+      } catch (err) {
+        return jsonResponse({ error: "Failed to update trash state" }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/vault/trash" && request.method === "DELETE") {
+      const tursoClient = getWorkerTursoClient(env);
+      if (!tursoClient) return jsonResponse({ error: "Database service unavailable." }, 503);
+      const verifiedUserId = parseWorkerAuth(request);
+      const paramUserId = url.searchParams.get("userId");
+      const targetUserId = verifiedUserId || paramUserId;
+      if (!targetUserId) return jsonResponse({ error: "Missing userId" }, 400);
+
+      try {
+        await tursoClient.execute({
+          sql: "DELETE FROM vault_files WHERE is_trash = 1 AND user_id = ?",
+          args: [targetUserId],
+        });
+        return jsonResponse({ success: true });
+      } catch (err) {
+        return jsonResponse({ error: "Failed to empty trash" }, 500);
+      }
+    }
+
 
     // Parse syllabus endpoint
     if (url.pathname === "/api/parse-syllabus" && request.method === "POST") {
@@ -505,11 +762,28 @@ Return ONLY a JSON object with this exact structure:
           return jsonResponse({ error: "Storage service is currently unavailable." }, 503);
         }
 
-        const { fileName, fileSize, mimeType, folder } = (await request.json()) as any;
+        const verifiedUserId = parseWorkerAuth(request);
+        const body: any = await request.json().catch(() => ({}));
+        const { fileName, fileSize, mimeType, folder } = body;
+        const targetUserId = verifiedUserId || body.userId;
+
+        if (!targetUserId) {
+          return jsonResponse({ error: "Unauthorized: User session required for upload" }, 401);
+        }
+
+        const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+        if (mimeType && !allowedMimeTypes.includes(mimeType)) {
+          return jsonResponse({ error: "Only PDF and image files are supported in Vault." }, 400);
+        }
+
         const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
         if (fileSize && fileSize > MAX_SIZE) {
           return jsonResponse({ error: "File size exceeds the 5MB limit." }, 400);
         }
+
+        const sanitizedName = String(fileName || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
+        const fileKey = `${targetUserId}/${Date.now()}_${sanitizedName}`;
+
         const r2 = new S3Client({
           region: "auto",
           endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -519,11 +793,11 @@ Return ONLY a JSON object with this exact structure:
           },
         });
 
-        const fileKey = `vault/${folder || "General"}/${Date.now()}_${fileName}`;
         const command = new PutObjectCommand({
           Bucket: env.R2_BUCKET_NAME || "nocus",
           Key: fileKey,
           ContentType: mimeType || "application/pdf",
+          ...(fileSize ? { ContentLength: fileSize } : {}),
         });
 
         const uploadUrl = await getSignedUrl(r2, command, { expiresIn: 600 });
@@ -538,6 +812,12 @@ Return ONLY a JSON object with this exact structure:
     if (url.pathname.startsWith("/api/vault/download-url/")) {
       try {
         const fileKey = decodeURIComponent(url.pathname.replace("/api/vault/download-url/", ""));
+        const verifiedUserId = parseWorkerAuth(request);
+
+        if (verifiedUserId && !fileKey.startsWith(verifiedUserId + "/") && !fileKey.startsWith("vault/")) {
+          return jsonResponse({ error: "Forbidden: Cannot access another user's file" }, 403);
+        }
+
         const r2 = new S3Client({
           region: "auto",
           endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -567,6 +847,11 @@ Return ONLY a JSON object with this exact structure:
         const fileKey = decodeURIComponent(url.pathname.replace("/api/vault/file/", ""));
         if (!fileKey) {
           return jsonResponse({ error: "fileKey is required" }, 400);
+        }
+
+        const verifiedUserId = parseWorkerAuth(request);
+        if (verifiedUserId && !fileKey.startsWith(verifiedUserId + "/") && !fileKey.startsWith("vault/")) {
+          return jsonResponse({ error: "Forbidden: Cannot delete another user's file" }, 403);
         }
 
         if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {

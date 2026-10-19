@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { 
-  turso, 
   loadVaultFilesFromTurso, 
   syncVaultFileToTurso, 
-  deleteVaultFileFromTurso 
+  deleteVaultFileFromTurso,
+  updateVaultFileFolder,
+  deleteVaultFolderFiles,
+  moveVaultFileToFolder,
+  setVaultFileTrash,
+  emptyVaultTrash,
+  getAuthHeaders
 } from "../lib/turso";
 import { 
   Upload, 
@@ -207,16 +212,9 @@ export default function VaultView({ user }: VaultViewProps) {
     if (!user) {
       localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
     } else {
-      try {
-        if (turso) {
-          await turso.execute({
-            sql: "UPDATE vault_files SET folder = ? WHERE user_id = ? AND folder = ?",
-            args: [trimmed, user.id, oldName],
-          });
-        }
-      } catch (err) {
+      updateVaultFileFolder(oldName, trimmed, user.id).catch((err) => {
         console.error("Error updating folder in database:", err);
-      }
+      });
     }
 
     if (activeFolder === oldName) {
@@ -257,15 +255,10 @@ export default function VaultView({ user }: VaultViewProps) {
     if (!user) {
       localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
     } else {
-      try {
-        if (filesInFolder.length > 0 && turso) {
-          await turso.execute({
-            sql: "DELETE FROM vault_files WHERE user_id = ? AND folder = ?",
-            args: [user.id, targetName],
-          });
-        }
-      } catch (err) {
-        console.error("Error deleting folder files from DB:", err);
+      if (filesInFolder.length > 0) {
+        deleteVaultFolderFiles(targetName, user.id).catch((err) => {
+          console.error("Error deleting folder files from DB:", err);
+        });
       }
     }
 
@@ -288,16 +281,9 @@ export default function VaultView({ user }: VaultViewProps) {
     if (!user) {
       localStorage.setItem("meridian_vault_files", JSON.stringify(updatedFiles));
     } else {
-      try {
-        if (turso) {
-          await turso.execute({
-            sql: "UPDATE vault_files SET folder = ? WHERE id = ?",
-            args: [targetFolderName, file.id],
-          });
-        }
-      } catch (err) {
+      moveVaultFileToFolder(file.id, targetFolderName, user.id).catch((err) => {
         console.error("Error moving file in database:", err);
-      }
+      });
     }
 
     setSuccessMsg(`Moved "${file.fileName}" to folder "${targetFolderName}".`);
@@ -414,7 +400,10 @@ export default function VaultView({ user }: VaultViewProps) {
     setPreviewUrl(null);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/vault/download-url/${encodeURIComponent(file.fileKey)}`);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/vault/download-url/${encodeURIComponent(file.fileKey)}`, {
+        headers,
+      });
       if (!res.ok) throw new Error("Could not retrieve file preview link.");
       
       const { downloadUrl } = await res.json();
@@ -482,9 +471,10 @@ export default function VaultView({ user }: VaultViewProps) {
 
       // Attempt Cloud storage upload if API is available
       try {
+        const authH = await getAuthHeaders();
         const urlRes = await fetch("/api/vault/upload-url", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authH,
           body: JSON.stringify({
             fileName: selectedFile.name,
             fileSize: selectedFile.size,
@@ -584,7 +574,10 @@ export default function VaultView({ user }: VaultViewProps) {
     setDownloadingId(file.id);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/vault/download-url/${encodeURIComponent(file.fileKey)}`);
+      const authH = await getAuthHeaders();
+      const res = await fetch(`/api/vault/download-url/${encodeURIComponent(file.fileKey)}`, {
+        headers: authH,
+      });
       if (!res.ok) throw new Error("Could not retrieve download link.");
       
       const { downloadUrl } = await res.json();
@@ -619,15 +612,10 @@ export default function VaultView({ user }: VaultViewProps) {
     );
     localStorage.setItem("meridian_vault_files", JSON.stringify(updatedList));
 
-    if (user && turso) {
-      try {
-        await turso.execute({
-          sql: "UPDATE vault_files SET is_trashed = 1, trashed_at = ? WHERE id = ?",
-          args: [now, file.id],
-        });
-      } catch (err) {
+    if (user) {
+      setVaultFileTrash(file.id, true, user.id, now).catch((err) => {
         console.error("Error moving file to trash in DB:", err);
-      }
+      });
     }
 
     setSuccessMsg(`Moved "${file.fileName}" to Trash. Auto-deletes permanently after 7 days.`);
@@ -648,15 +636,10 @@ export default function VaultView({ user }: VaultViewProps) {
     );
     localStorage.setItem("meridian_vault_files", JSON.stringify(updatedList));
 
-    if (user && turso) {
-      try {
-        await turso.execute({
-          sql: "UPDATE vault_files SET is_trashed = 0, trashed_at = NULL WHERE id = ?",
-          args: [file.id],
-        });
-      } catch (err) {
+    if (user) {
+      setVaultFileTrash(file.id, false, user.id, null).catch((err) => {
         console.error("Error restoring file from trash in DB:", err);
-      }
+      });
     }
 
     setSuccessMsg(`Restored "${file.fileName}" from Trash.`);
@@ -673,8 +656,10 @@ export default function VaultView({ user }: VaultViewProps) {
     try {
       // 1. Delete file from Cloudflare R2 bucket
       if (file.fileKey && !file.fileKey.startsWith("local_")) {
+        const authH = await getAuthHeaders();
         const deleteRes = await fetch(`/api/vault/file/${encodeURIComponent(file.fileKey)}`, {
           method: "DELETE",
+          headers: authH,
         });
 
         if (!deleteRes.ok) {
@@ -716,9 +701,13 @@ export default function VaultView({ user }: VaultViewProps) {
     setLoading(true);
     try {
       // 1. Delete all trashed files from Cloudflare R2 bucket
+      const authH = await getAuthHeaders();
       for (const file of trashedFiles) {
         if (file.fileKey && !file.fileKey.startsWith("local_")) {
-          await fetch(`/api/vault/file/${encodeURIComponent(file.fileKey)}`, { method: "DELETE" }).catch(() => {});
+          await fetch(`/api/vault/file/${encodeURIComponent(file.fileKey)}`, {
+            method: "DELETE",
+            headers: authH,
+          }).catch(() => {});
         }
       }
 
@@ -729,11 +718,8 @@ export default function VaultView({ user }: VaultViewProps) {
       localStorage.setItem("meridian_vault_files", JSON.stringify(remainingLocal));
 
       // 3. Clean Turso DB if logged in
-      if (user && turso) {
-        await turso.execute({
-          sql: "DELETE FROM vault_files WHERE user_id = ? AND is_trashed = 1",
-          args: [user.id],
-        });
+      if (user) {
+        await emptyVaultTrash(user.id);
       }
 
       // 4. Update UI state

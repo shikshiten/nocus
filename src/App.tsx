@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useUser, useClerk } from "@clerk/react";
+import { useUser, useClerk, useAuth } from "@clerk/react";
 import { 
-  turso, 
   loadUserSyllabusesFromTurso, 
   syncSyllabusToTurso, 
-  deleteSyllabusFromTurso, 
-  initTursoTables 
+  deleteSyllabusFromTurso,
+  setAuthTokenGetter
 } from "./lib/turso";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -71,11 +70,19 @@ import VaultView from "./components/VaultView";
 
 export default function App() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
+  const { getToken } = useAuth();
   const clerk = useClerk();
   const [authTimedOut, setAuthTimedOut] = useState(false);
-  const [guestMode, setGuestMode] = useState<boolean>(() => {
-    return localStorage.getItem("meridian_guest_mode") === "true" || localStorage.getItem("nocus_guest_mode") === "true";
-  });
+
+  useEffect(() => {
+    setAuthTokenGetter(async () => {
+      try {
+        return await getToken();
+      } catch {
+        return null;
+      }
+    });
+  }, [getToken]);
 
   useEffect(() => {
     // Release loading screen after 1.2s max if Clerk is still connecting/blocked
@@ -85,7 +92,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  const authLoading = !clerkLoaded && !authTimedOut && !guestMode;
+  const authLoading = !clerkLoaded && !authTimedOut;
 
   const user = clerkUser
     ? {
@@ -934,9 +941,6 @@ export default function App() {
   };
 
   // Custom App Preferences
-  const [guestName, setGuestName] = useState(() => {
-    return localStorage.getItem("guestName") || "Syllabus Explorer";
-  });
   const [weeklyTarget, setWeeklyTarget] = useState(() => {
     const saved = localStorage.getItem("weeklyTarget");
     return saved ? Number(saved) : 5;
@@ -948,11 +952,6 @@ export default function App() {
     return localStorage.getItem("customAvatar") || "";
   });
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
-
-  const handleUpdateGuestName = (name: string) => {
-    setGuestName(name);
-    localStorage.setItem("guestName", name);
-  };
 
   const handleUpdateCustomAvatar = (avatar: string) => {
     setCustomAvatar(avatar);
@@ -1287,34 +1286,15 @@ export default function App() {
     }
   };
 
-  // Monitor Authentication state and load appropriate syllabuses
+  // Monitor Authentication state and load syllabuses for logged-in user
   useEffect(() => {
     if (!clerkLoaded) return;
 
     if (user?.id) {
       loadSyllabusesFromDatabase(user.id);
     } else {
-      const localListStr = localStorage.getItem("syllabuses");
-      const legacySingleStr = localStorage.getItem("syllabus");
-
-      let list: Syllabus[] = [];
-      if (localListStr) {
-        try {
-          list = JSON.parse(localListStr);
-        } catch {}
-      } else if (legacySingleStr) {
-        try {
-          const single = JSON.parse(legacySingleStr);
-          list = [single];
-          localStorage.setItem("syllabuses", JSON.stringify(list));
-          localStorage.removeItem("syllabus");
-        } catch {}
-      }
-
-      setSyllabuses(list);
-      const savedActiveId = localStorage.getItem("activeSyllabusId");
-      const active = list.find(s => s.id === savedActiveId) || list[0] || null;
-      setCurrentSyllabus(active);
+      setSyllabuses([]);
+      setCurrentSyllabus(null);
     }
   }, [clerkLoaded, user?.id]);
 
@@ -1890,20 +1870,10 @@ export default function App() {
     await saveSyllabus(updatedSyllabus);
   };
 
-  // Login - redirect to auth view
-  const handleLogin = async () => {
-    setGuestMode(false);
-    localStorage.removeItem("meridian_guest_mode");
-    localStorage.removeItem("nocus_guest_mode");
-  };
-
   // Logout
   const handleLogout = async () => {
     try {
       await clerk.signOut();
-      setGuestMode(false);
-      localStorage.removeItem("meridian_guest_mode");
-      localStorage.removeItem("nocus_guest_mode");
       setSyllabuses([]);
       setCurrentSyllabus(null);
       localStorage.removeItem("activeSyllabusId");
@@ -2732,16 +2702,8 @@ export default function App() {
     );
   }
 
-  if (!user && !guestMode) {
-    return (
-      <LandingPage
-        onGuestMode={() => {
-          setGuestMode(true);
-          localStorage.setItem("meridian_guest_mode", "true");
-          localStorage.setItem("nocus_guest_mode", "true");
-        }}
-      />
-    );
+  if (!user) {
+    return <LandingPage />;
   }
 
   return (
@@ -2795,7 +2757,7 @@ export default function App() {
                 <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <div className="w-full h-full bg-primary-soft-app text-primary-app flex items-center justify-center font-bold text-xs">
-                  {(user?.user_metadata?.full_name || guestName).charAt(0).toUpperCase()}
+                  {(user?.user_metadata?.full_name || "Scholar").charAt(0).toUpperCase()}
                 </div>
               )}
             </button>
@@ -2879,7 +2841,7 @@ export default function App() {
                     <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     <div className="w-full h-full bg-primary-soft-app text-primary-app flex items-center justify-center font-bold text-xs">
-                      {(user?.user_metadata?.full_name || guestName).charAt(0).toUpperCase()}
+                      {(user?.user_metadata?.full_name || "Scholar").charAt(0).toUpperCase()}
                     </div>
                   )}
                 </button>
@@ -3293,7 +3255,6 @@ export default function App() {
                 </div>
               ) : (
                 <button
-                  onClick={handleLogin}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--accent)] text-white hover:brightness-110 font-bold text-xs cursor-pointer shadow-md shadow-[var(--accent-glow)] hover:scale-105 active:scale-95 transition-all border-0"
                 >
                   <LogIn className="w-3.5 h-3.5 text-white" />
@@ -3470,15 +3431,6 @@ export default function App() {
                         onScanImages={handleScanImages}
                       />
 
-                      {!user && (
-                        <div className="p-4 bg-[var(--accent-soft)] text-[var(--text)] text-xs rounded-2xl border border-[var(--accent)] text-center max-w-lg mx-auto transition-colors">
-                          💡 <strong>Guest Mode:</strong> Your data is saved locally on this browser.{" "}
-                          <button onClick={handleLogin} className="underline font-bold text-[var(--accent)] hover:brightness-125 cursor-pointer transition-all">
-                            Sign in with Google
-                          </button>{" "}
-                          to securely back up your data to the cloud.
-                        </div>
-                      )}
                     </motion.div>
                   );
                 }
@@ -3510,7 +3462,6 @@ export default function App() {
                           }}
                           onAddCourse={() => setIsAddingCourse(true)}
                           user={user}
-                          guestName={guestName}
                           onNavigate={(tab) => setActiveSidebarTab(tab as any)}
                           completedCount={counts.completed}
                           inProgressCount={counts.inProgress}
@@ -3699,12 +3650,9 @@ export default function App() {
                           user={user}
                           syllabuses={syllabuses}
                           onBack={() => setActiveSidebarTab("dashboard")}
-                          onLogin={handleLogin}
                           onLogout={handleLogout}
                           onResetAllData={handleResetAllData}
                           onImportData={handleImportData}
-                          guestName={guestName}
-                          onUpdateGuestName={handleUpdateGuestName}
                           weeklyTarget={weeklyTarget}
                           onUpdateWeeklyTarget={handleUpdateWeeklyTarget}
                           primaryColor={primaryColor}

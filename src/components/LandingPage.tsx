@@ -14,16 +14,10 @@ import {
   GraduationCap,
   CheckCircle2,
   ChevronDown,
-  Zap,
-  Lock,
   Compass
 } from "lucide-react";
 
-interface LandingPageProps {
-  onGuestMode: () => void;
-}
-
-export default function LandingPage({ onGuestMode }: LandingPageProps) {
+export default function LandingPage() {
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
@@ -73,7 +67,7 @@ export default function LandingPage({ onGuestMode }: LandingPageProps) {
       icon: ShieldCheck,
       color: "from-cyan-500 to-blue-500",
       title: "Offline-First & Private",
-      desc: "Full guest mode allows you to study without an account. When signed in, all your checklists and notes sync seamlessly across your devices."
+      desc: "Study privately in your browser. When signed in, all your checklists and notes sync seamlessly across your devices."
     }
   ];
 
@@ -84,7 +78,7 @@ export default function LandingPage({ onGuestMode }: LandingPageProps) {
     },
     {
       q: "Can I use Nocus completely free?",
-      a: "Yes! Nocus is 100% free to use. You can jump right in with Guest Mode without signing up, or create a free Scholar account to sync your study progress across your laptop and phone."
+      a: "Yes! Nocus is 100% free to use. Create a free Scholar account to sync your study progress across your laptop and phone."
     },
     {
       q: "How does the AI syllabus parser work?",
@@ -132,12 +126,6 @@ export default function LandingPage({ onGuestMode }: LandingPageProps) {
           </nav>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={onGuestMode}
-              className="text-xs font-semibold text-slate-300 hover:text-white transition-colors px-3 py-1.5 cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl"
-            >
-              Guest Mode
-            </button>
             <button
               onClick={scrollToAuth}
               className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5"
@@ -187,27 +175,20 @@ export default function LandingPage({ onGuestMode }: LandingPageProps) {
               Nocus turns complex curriculum PDFs into structured chapter checklists, keeps you disciplined with daily streaks and Pomodoro focus timers, and organizes all your study docs in one sleek space.
             </motion.p>
 
-            {/* Quick Guest CTA & Exploration */}
+            {/* Explore Features CTA */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
               className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5"
             >
-              <button
-                onClick={onGuestMode}
-                className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold rounded-2xl shadow-xl shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Zap className="w-4 h-4 text-amber-300" />
-                <span>Try Instantly as Guest</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-
               <a
                 href="#features"
-                className="w-full sm:w-auto px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold rounded-2xl shadow-xl shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
               >
+                <Sparkles className="w-4 h-4 text-amber-300" />
                 <span>Explore Features</span>
+                <ChevronRight className="w-4 h-4" />
               </a>
             </motion.div>
 
@@ -355,19 +336,6 @@ export default function LandingPage({ onGuestMode }: LandingPageProps) {
                     }}
                   />
                 )}
-              </div>
-
-              {/* Or Continue as Guest Option */}
-              <div className="mt-5 pt-4 border-t border-white/10 text-center space-y-2">
-                <span className="text-[11px] text-slate-400 block">Don't want to sign in right now?</span>
-                <button
-                  type="button"
-                  onClick={onGuestMode}
-                  className="w-full py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/15 rounded-xl text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <Lock className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Continue as Guest (Offline Mode)</span>
-                </button>
               </div>
 
             </motion.div>
@@ -583,7 +551,7 @@ export default function LandingPage({ onGuestMode }: LandingPageProps) {
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
-                onClick={onGuestMode}
+                onClick={scrollToAuth}
                 className="w-full sm:w-auto px-8 py-3.5 bg-white text-indigo-950 hover:bg-indigo-50 text-sm font-black rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer inline-flex items-center justify-center gap-2"
               >
                 <GraduationCap className="w-4 h-4" />

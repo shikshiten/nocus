@@ -1,16 +1,50 @@
 import { createClient } from "@libsql/client/web";
+import { createClerkClient } from "@clerk/backend";
 
-const defaultTursoUrl = "https://nocus-shikshiten.aws-ap-south-1.turso.io";
-const defaultTursoToken = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJnaWQiOiJhZTI2ZTkxYy0yZWIzLTQzOTctYTFmOS1jNDhiMzg4MzYzZGMiLCJpYXQiOjE3OTIwMDMxNzUsImtpZCI6ImFId2pRZzFWQ1ZLejB6OW55MVprRDhrYUR4UkhlOG1Ca2YwTkRQQnpTZGsiLCJyaWQiOiI1ZGU0ZjYwNy1hNTIxLTQ1ODktYTU2Mi01ZDU1N2Y4MGJlZjUifQ.g-_w5JnSYEI8F4sGpd71lfruwV4mMiJiOmGScpOzt1BEeRQdeh4mbkJFINICEwYlugWV0Wn3eeXbBeXa69FQCw";
+const clerkPublishableKey = (process.env.VITE_CLERK_PUBLISHABLE_KEY || process.env.CLERK_PUBLISHABLE_KEY || "").trim();
+const clerkSecretKey = (process.env.CLERK_SECRET_KEY || "").trim();
 
-const rawUrl = (process.env.VITE_TURSO_DATABASE_URL || process.env.TURSO_DATABASE_URL || defaultTursoUrl).trim();
-const tursoUrl = rawUrl.replace(/^libsql:\/\//, "https://");
-const tursoAuthToken = (process.env.VITE_TURSO_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || defaultTursoToken).trim();
+const clerkClient = (clerkPublishableKey || clerkSecretKey)
+  ? createClerkClient({
+      publishableKey: clerkPublishableKey,
+      secretKey: clerkSecretKey,
+    })
+  : null;
 
-const client = createClient({
-  url: tursoUrl,
-  authToken: tursoAuthToken,
-});
+async function authenticateUser(req: any): Promise<string | null> {
+  const authHeader = req.headers?.authorization || req.headers?.Authorization;
+  if (!authHeader || typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!token) return null;
+
+  if (clerkClient) {
+    try {
+      const verified = await clerkClient.verifyToken(token);
+      return verified.sub || null;
+    } catch (err) {
+      console.error("Clerk token verification failed in api/sync-syllabuses:", err);
+      return null;
+    }
+  }
+  return null;
+}
+
+function getTursoClient() {
+  const rawUrl = (process.env.TURSO_DATABASE_URL || "").trim();
+  const tursoUrl = rawUrl.replace(/^libsql:\/\//, "https://");
+  const tursoAuthToken = (process.env.TURSO_AUTH_TOKEN || "").trim();
+
+  if (!tursoUrl || !tursoAuthToken) {
+    return null;
+  }
+
+  return createClient({
+    url: tursoUrl,
+    authToken: tursoAuthToken,
+  });
+}
 
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -21,16 +55,29 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
+  const client = getTursoClient();
+  if (!client) {
+    return res.status(503).json({ error: "Database service unavailable. Missing environment configuration." });
+  }
+
   try {
+    const verifiedUserId = await authenticateUser(req);
+
     if (req.method === "GET") {
-      const userId = req.query.userId || req.query.user_id;
-      if (!userId) {
-        return res.status(400).json({ error: "userId is required" });
+      const paramUserId = req.query.userId || req.query.user_id;
+      const targetUserId = verifiedUserId || paramUserId;
+
+      if (!targetUserId) {
+        return res.status(401).json({ error: "Unauthorized: userId is required" });
+      }
+
+      if (verifiedUserId && paramUserId && verifiedUserId !== paramUserId) {
+        return res.status(403).json({ error: "Forbidden: Cannot access another user's syllabus" });
       }
 
       const result = await client.execute({
         sql: "SELECT * FROM syllabuses WHERE user_id = ? ORDER BY created_at DESC",
-        args: [String(userId)],
+        args: [String(targetUserId)],
       });
 
       const syllabuses = result.rows.map((row: any) => ({
@@ -52,8 +99,14 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === "POST") {
       const { syllabus, userId } = req.body || {};
-      if (!syllabus || !userId) {
+      const targetUserId = verifiedUserId || userId;
+
+      if (!syllabus || !targetUserId) {
         return res.status(400).json({ error: "syllabus and userId are required" });
+      }
+
+      if (verifiedUserId && userId && verifiedUserId !== userId) {
+        return res.status(403).json({ error: "Forbidden: Cannot save syllabus for another user" });
       }
 
       await client.execute({
@@ -68,10 +121,11 @@ export default async function handler(req: any, res: any) {
               units = excluded.units,
               keep_notes = excluded.keep_notes,
               planned_topics_today = excluded.planned_topics_today,
-              updated_at = CURRENT_TIMESTAMP`,
+              updated_at = CURRENT_TIMESTAMP
+              WHERE syllabuses.user_id = excluded.user_id`,
         args: [
           syllabus.id,
-          userId,
+          targetUserId,
           syllabus.subjectName,
           syllabus.examDate || null,
           syllabus.dailyTarget || 4,
@@ -89,14 +143,20 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === "DELETE") {
       const id = req.query.id;
-      const userId = req.query.userId || req.query.user_id;
-      if (!id || !userId) {
+      const paramUserId = req.query.userId || req.query.user_id;
+      const targetUserId = verifiedUserId || paramUserId;
+
+      if (!id || !targetUserId) {
         return res.status(400).json({ error: "id and userId are required" });
+      }
+
+      if (verifiedUserId && paramUserId && verifiedUserId !== paramUserId) {
+        return res.status(403).json({ error: "Forbidden: Cannot delete another user's syllabus" });
       }
 
       await client.execute({
         sql: "DELETE FROM syllabuses WHERE id = ? AND user_id = ?",
-        args: [String(id), String(userId)],
+        args: [String(id), String(targetUserId)],
       });
 
       return res.status(200).json({ success: true });
@@ -105,6 +165,7 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err: any) {
     console.error("Turso serverless sync error:", err);
-    return res.status(500).json({ error: err?.message || "Database sync failed" });
+    return res.status(500).json({ error: "Database sync failed" });
   }
 }
+

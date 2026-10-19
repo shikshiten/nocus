@@ -75,7 +75,7 @@ interface DashboardViewProps {
   onSelectSyllabus?: (id: string) => void;
   onAddCourse?: () => void;
   user: any;
-  guestName: string;
+  guestName?: string;
   onNavigate: (tab: "dashboard" | "checklist" | "notes" | "timer" | "analytics" | "calendar" | "bookmarks" | "settings" | "help") => void;
   completedCount: number;
   inProgressCount: number;
@@ -111,7 +111,7 @@ export default function DashboardView({
   onSelectSyllabus,
   onAddCourse,
   user,
-  guestName,
+  guestName = "Scholar",
   onNavigate,
   completedCount,
   inProgressCount,

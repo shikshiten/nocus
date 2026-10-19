@@ -38,12 +38,10 @@ interface AccountSettingsProps {
   user: any;
   syllabuses: Syllabus[];
   onBack: () => void;
-  onLogin: () => void;
   onLogout: () => void;
   onResetAllData: () => void;
   onImportData: (data: Syllabus[]) => void;
-  guestName: string;
-  onUpdateGuestName: (name: string) => void;
+  guestName?: string;
   weeklyTarget: number;
   onUpdateWeeklyTarget: (target: number) => void;
   primaryColor: string;
@@ -61,12 +59,10 @@ export default function AccountSettings({
   user,
   syllabuses,
   onBack,
-  onLogin,
   onLogout,
   onResetAllData,
   onImportData,
-  guestName,
-  onUpdateGuestName,
+  guestName = "Scholar",
   weeklyTarget,
   onUpdateWeeklyTarget,
   primaryColor,
@@ -173,7 +169,6 @@ export default function AccountSettings({
 
   const saveName = () => {
     if (tempName.trim()) {
-      onUpdateGuestName(tempName.trim());
       setIsEditingName(false);
       triggerSuccess("Profile name saved!");
     } else {

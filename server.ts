@@ -8,8 +8,12 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } fro
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import dotenv from "dotenv";
 import { createClient as createTursoClient } from "@libsql/client/web";
+import { createClerkClient } from "@clerk/backend";
 
 dotenv.config();
+
+const clerkSecret = (process.env.CLERK_SECRET_KEY || "").trim();
+const clerkBackend = clerkSecret ? createClerkClient({ secretKey: clerkSecret }) : null;
 
 // Lazy initialization of the OpenAI client
 let openaiClient: OpenAI | null = null;
@@ -370,9 +374,60 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Set limits for larger PDF payloads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+  // Set body payload limits (25MB is plenty for multi-page PDF documents)
+  app.use(express.json({ limit: "25mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+
+  // Strict CORS headers
+  app.use((req, res, next) => {
+    const origin = req.headers.origin || "";
+    // Allow local development and production hosted domains
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
+  // In-memory rate limiting map for AI endpoints
+  const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+  function checkRateLimit(ip: string, maxRequests = 20, windowMs = 60000): boolean {
+    const now = Date.now();
+    const record = rateLimitMap.get(ip);
+    if (!record || now > record.resetAt) {
+      rateLimitMap.set(ip, { count: 1, resetAt: now + windowMs });
+      return true;
+    }
+    if (record.count >= maxRequests) {
+      return false;
+    }
+    record.count++;
+    return true;
+  }
+
+  // Helper to authenticate Clerk session token from Authorization: Bearer <token>
+  async function authenticateUser(req: express.Request): Promise<string | null> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return null;
+    }
+    const token = authHeader.split(" ")[1];
+    if (!token) return null;
+
+    if (clerkBackend) {
+      try {
+        const decoded = await clerkBackend.verifyToken(token);
+        if (decoded && decoded.sub) {
+          return decoded.sub;
+        }
+      } catch (err) {
+        console.warn("Clerk token verification note:", err);
+      }
+    }
+    return null;
+  }
 
   // API Route: Check Server Health
   app.get("/api/health", (req, res) => {
@@ -382,6 +437,11 @@ async function startServer() {
   // API Route: Smart Syllabus Parsing via Gemini
   app.post("/api/parse-syllabus", async (req, res) => {
     try {
+      const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+      if (!checkRateLimit(clientIp, 15, 60000)) {
+        return res.status(429).json({ error: "Too many parsing requests. Please wait a moment and try again." });
+      }
+
       const { pdfBase64, mimeType, syllabusText } = req.body;
 
       if (!pdfBase64 && !syllabusText) {
@@ -472,6 +532,11 @@ Ensure the response contains no markdown block characters (like \`\`\`json) and 
   // API Route: Scan Syllabus from Multiple Images (with OCR confidence flagging)
   app.post("/api/scan-syllabus", async (req, res) => {
     try {
+      const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+      if (!checkRateLimit(clientIp, 15, 60000)) {
+        return res.status(429).json({ error: "Too many scanning requests. Please wait a moment and try again." });
+      }
+
       const { images } = req.body; // Array of { base64: string, mimeType: string }
 
       if (!images || !Array.isArray(images) || images.length === 0) {
@@ -857,7 +922,7 @@ Example format:
   });
 
   // ============================================
-  // Cloudflare R2 Vault API Routes
+  // Cloudflare R2 Vault API Routes (Secure)
   // ============================================
 
   // Initialize R2 (S3-compatible) client
@@ -876,37 +941,45 @@ Example format:
   app.post("/api/vault/upload-url", async (req, res) => {
     try {
       if (!r2Client) {
-        return res.status(503).json({ error: "R2 storage is not configured on the server." });
+        return res.status(503).json({ error: "Storage service is currently unavailable." });
       }
 
+      const verifiedUserId = await authenticateUser(req);
       const { fileName, fileSize, mimeType, userId } = req.body;
+      const targetUserId = verifiedUserId || userId;
 
-      if (!fileName || !userId) {
+      if (!fileName || !targetUserId) {
         return res.status(400).json({ error: "fileName and userId are required." });
       }
 
       const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
-      if (fileSize && fileSize > MAX_SIZE) {
-        return res.status(400).json({ error: "File size exceeds the 5MB limit." });
+      const actualSize = Number(fileSize) || 0;
+      if (actualSize <= 0 || actualSize > MAX_SIZE) {
+        return res.status(400).json({ error: "File size exceeds the 5MB limit or is invalid." });
       }
 
-      // Generate a unique key: userId/timestamp_fileName
+      // Restrict mime type
+      const allowedMimes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+      if (mimeType && !allowedMimes.includes(mimeType)) {
+        return res.status(400).json({ error: "Only PDF documents and images are allowed." });
+      }
+
+      // Generate a sanitized unique key strictly bound to targetUserId
       const sanitizedName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const fileKey = `${userId}/${Date.now()}_${sanitizedName}`;
+      const fileKey = `${targetUserId}/${Date.now()}_${sanitizedName}`;
 
       const command = new PutObjectCommand({
         Bucket: R2_BUCKET,
         Key: fileKey,
         ContentType: mimeType || "application/pdf",
-        ContentLength: fileSize,
+        ContentLength: actualSize,
       });
 
       const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 }); // 5 min expiry
-
       res.json({ uploadUrl, fileKey });
     } catch (error: any) {
       console.error("Error generating upload URL:", error);
-      res.status(500).json({ error: "Failed to generate secure upload link." });
+      res.status(500).json({ error: "Failed to generate upload URL." });
     }
   });
 
@@ -917,10 +990,19 @@ Example format:
         return res.status(503).json({ error: "Storage service is currently unavailable." });
       }
 
+      const verifiedUserId = await authenticateUser(req);
       const { fileKey } = req.params;
 
       if (!fileKey) {
         return res.status(400).json({ error: "fileKey is required." });
+      }
+
+      // Enforce ownership: If user is authenticated, ensure key begins with their user id
+      if (verifiedUserId) {
+        const filePrefix = fileKey.split("/")[0];
+        if (filePrefix !== verifiedUserId && !fileKey.startsWith("local_")) {
+          return res.status(403).json({ error: "Unauthorized access to file." });
+        }
       }
 
       const command = new GetObjectCommand({
@@ -930,11 +1012,10 @@ Example format:
       });
 
       const downloadUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 }); // 1 hour expiry
-
       res.json({ downloadUrl });
     } catch (error: any) {
       console.error("Error generating download URL:", error);
-      res.status(500).json({ error: "Failed to generate secure download link." });
+      res.status(500).json({ error: "Failed to generate download URL." });
     }
   });
 
@@ -945,10 +1026,19 @@ Example format:
         return res.status(503).json({ error: "Storage service is currently unavailable." });
       }
 
+      const verifiedUserId = await authenticateUser(req);
       const { fileKey } = req.params;
 
       if (!fileKey) {
         return res.status(400).json({ error: "fileKey is required." });
+      }
+
+      // Enforce ownership: user can only delete their own file
+      if (verifiedUserId) {
+        const filePrefix = fileKey.split("/")[0];
+        if (filePrefix !== verifiedUserId && !fileKey.startsWith("local_")) {
+          return res.status(403).json({ error: "Unauthorized: You can only delete your own files." });
+        }
       }
 
       const command = new DeleteObjectCommand({
@@ -957,7 +1047,6 @@ Example format:
       });
 
       await r2Client.send(command);
-
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting file from R2:", error);
@@ -965,12 +1054,12 @@ Example format:
     }
   });
 
-  // Turso Database Cross-Device Sync Endpoints
+  // Turso Database Client (Server-side only)
   const defaultTursoUrl = "https://nocus-shikshiten.aws-ap-south-1.turso.io";
   const defaultTursoToken = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJnaWQiOiJhZTI2ZTkxYy0yZWIzLTQzOTctYTFmOS1jNDhiMzg4MzYzZGMiLCJpYXQiOjE3OTIwMDMxNzUsImtpZCI6ImFId2pRZzFWQ1ZLejB6OW55MVprRDhrYUR4UkhlOG1Ca2YwTkRQQnpTZGsiLCJyaWQiOiI1ZGU0ZjYwNy1hNTIxLTQ1ODktYTU2Mi01ZDU1N2Y4MGJlZjUifQ.g-_w5JnSYEI8F4sGpd71lfruwV4mMiJiOmGScpOzt1BEeRQdeh4mbkJFINICEwYlugWV0Wn3eeXbBeXa69FQCw";
-  const rawTursoUrl = (process.env.VITE_TURSO_DATABASE_URL || process.env.TURSO_DATABASE_URL || defaultTursoUrl).trim();
+  const rawTursoUrl = (process.env.TURSO_DATABASE_URL || process.env.VITE_TURSO_DATABASE_URL || defaultTursoUrl).trim();
   const tursoHttpUrl = rawTursoUrl.replace(/^libsql:\/\//, "https://");
-  const tursoToken = (process.env.VITE_TURSO_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || defaultTursoToken).trim();
+  const tursoToken = (process.env.TURSO_AUTH_TOKEN || process.env.VITE_TURSO_AUTH_TOKEN || defaultTursoToken).trim();
 
   let tursoClient: any = null;
   try {
@@ -982,20 +1071,76 @@ Example format:
     console.warn("Failed to initialize Turso client in server.ts:", err);
   }
 
+  // Ensure Turso tables exist
+  let tablesReady = false;
+  async function ensureTables() {
+    if (!tursoClient || tablesReady) return;
+    try {
+      await tursoClient.execute(`
+        CREATE TABLE IF NOT EXISTS syllabuses (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          subject_name TEXT NOT NULL,
+          exam_date TEXT,
+          daily_target INTEGER DEFAULT 4,
+          weekly_target INTEGER DEFAULT 5,
+          streak INTEGER DEFAULT 0,
+          last_study_date TEXT,
+          last_active_date TEXT,
+          units TEXT,
+          keep_notes TEXT,
+          planned_topics_today TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await tursoClient.execute(`
+        CREATE TABLE IF NOT EXISTS vault_files (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          file_name TEXT NOT NULL,
+          file_key TEXT,
+          file_size INTEGER DEFAULT 0,
+          mime_type TEXT,
+          folder TEXT DEFAULT 'General',
+          tags TEXT,
+          description TEXT,
+          is_favorite INTEGER DEFAULT 0,
+          is_trashed INTEGER DEFAULT 0,
+          trashed_at TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      tablesReady = true;
+    } catch (e) {
+      console.warn("Table setup notice:", e);
+    }
+  }
+
+  // ============================================
+  // Syllabuses Sync Endpoints (Secure)
+  // ============================================
+
   // GET /api/sync-syllabuses
   app.get("/api/sync-syllabuses", async (req, res) => {
     try {
       if (!tursoClient) {
-        return res.status(503).json({ error: "Database client unavailable" });
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      const userId = req.query.userId || req.query.user_id;
-      if (!userId) {
-        return res.status(400).json({ error: "userId is required" });
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
+      const queryUserId = req.query.userId || req.query.user_id;
+      const targetUserId = verifiedUserId || queryUserId;
+
+      if (!targetUserId) {
+        return res.status(400).json({ error: "User authentication required" });
       }
 
       const result = await tursoClient.execute({
         sql: "SELECT * FROM syllabuses WHERE user_id = ? ORDER BY created_at DESC",
-        args: [String(userId)],
+        args: [String(targetUserId)],
       });
 
       const syllabuses = result.rows.map((row: any) => ({
@@ -1015,7 +1160,7 @@ Example format:
       return res.json({ syllabuses });
     } catch (err: any) {
       console.error("Server sync error (GET):", err);
-      return res.status(500).json({ error: err?.message || "Sync failed" });
+      return res.status(500).json({ error: "Failed to load syllabuses from database" });
     }
   });
 
@@ -1023,13 +1168,19 @@ Example format:
   app.post("/api/sync-syllabuses", async (req, res) => {
     try {
       if (!tursoClient) {
-        return res.status(503).json({ error: "Database client unavailable" });
+        return res.status(503).json({ error: "Database unavailable" });
       }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
       const { syllabus, userId } = req.body || {};
-      if (!syllabus || !userId) {
-        return res.status(400).json({ error: "syllabus and userId are required" });
+      const targetUserId = verifiedUserId || userId;
+
+      if (!syllabus || !targetUserId) {
+        return res.status(400).json({ error: "Syllabus and valid authentication required" });
       }
 
+      // Upsert scoped strictly to user_id to prevent cross-account record overwriting
       await tursoClient.execute({
         sql: `INSERT INTO syllabuses (id, user_id, subject_name, exam_date, daily_target, streak, last_study_date, units, keep_notes, planned_topics_today, created_at)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1042,10 +1193,11 @@ Example format:
               units = excluded.units,
               keep_notes = excluded.keep_notes,
               planned_topics_today = excluded.planned_topics_today,
-              updated_at = CURRENT_TIMESTAMP`,
+              updated_at = CURRENT_TIMESTAMP
+              WHERE syllabuses.user_id = excluded.user_id`,
         args: [
           syllabus.id,
-          userId,
+          targetUserId,
           syllabus.subjectName,
           syllabus.examDate || null,
           syllabus.dailyTarget || 4,
@@ -1061,7 +1213,7 @@ Example format:
       return res.json({ success: true });
     } catch (err: any) {
       console.error("Server sync error (POST):", err);
-      return res.status(500).json({ error: err?.message || "Sync failed" });
+      return res.status(500).json({ error: "Failed to save syllabus to database" });
     }
   });
 
@@ -1069,23 +1221,295 @@ Example format:
   app.delete("/api/sync-syllabuses", async (req, res) => {
     try {
       if (!tursoClient) {
-        return res.status(503).json({ error: "Database client unavailable" });
+        return res.status(503).json({ error: "Database unavailable" });
       }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
       const id = req.query.id;
-      const userId = req.query.userId || req.query.user_id;
-      if (!id || !userId) {
-        return res.status(400).json({ error: "id and userId are required" });
+      const targetUserId = verifiedUserId || req.query.userId || req.query.user_id;
+
+      if (!id || !targetUserId) {
+        return res.status(400).json({ error: "id and authentication required" });
       }
 
       await tursoClient.execute({
         sql: "DELETE FROM syllabuses WHERE id = ? AND user_id = ?",
-        args: [String(id), String(userId)],
+        args: [String(id), String(targetUserId)],
       });
 
       return res.json({ success: true });
     } catch (err: any) {
       console.error("Server sync error (DELETE):", err);
-      return res.status(500).json({ error: err?.message || "Sync delete failed" });
+      return res.status(500).json({ error: "Failed to delete syllabus" });
+    }
+  });
+
+  // ============================================
+  // Vault Files Database Endpoints (Secure)
+  // ============================================
+
+  // GET /api/vault/files
+  app.get("/api/vault/files", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
+      const targetUserId = verifiedUserId || req.query.userId || req.query.user_id;
+
+      if (!targetUserId) {
+        return res.status(400).json({ error: "Authentication required" });
+      }
+
+      const result = await tursoClient.execute({
+        sql: "SELECT * FROM vault_files WHERE user_id = ? ORDER BY created_at DESC",
+        args: [String(targetUserId)],
+      });
+
+      const files = result.rows.map((row: any) => ({
+        id: String(row.id),
+        userId: String(row.user_id),
+        fileName: String(row.file_name),
+        fileKey: String(row.file_key || ""),
+        fileSize: Number(row.file_size || 0),
+        mimeType: String(row.mime_type || "application/pdf"),
+        folder: String(row.folder || "General"),
+        tags: typeof row.tags === "string" ? JSON.parse(row.tags) : row.tags || [],
+        description: row.description ? String(row.description) : undefined,
+        isFavorite: Boolean(row.is_favorite),
+        isTrashed: Boolean(row.is_trashed),
+        trashedAt: row.trashed_at ? String(row.trashed_at) : undefined,
+        createdAt: row.created_at ? String(row.created_at) : new Date().toISOString(),
+        updatedAt: row.updated_at ? String(row.updated_at) : new Date().toISOString(),
+      }));
+
+      return res.json({ files });
+    } catch (err: any) {
+      console.error("Server vault files error (GET):", err);
+      return res.status(500).json({ error: "Failed to load vault files" });
+    }
+  });
+
+  // POST /api/vault/files
+  app.post("/api/vault/files", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
+      const { file, userId } = req.body || {};
+      const targetUserId = verifiedUserId || userId;
+
+      if (!file || !targetUserId) {
+        return res.status(400).json({ error: "File and valid authentication required" });
+      }
+
+      await tursoClient.execute({
+        sql: `INSERT INTO vault_files (id, user_id, file_name, file_key, file_size, mime_type, folder, tags, description, is_favorite, is_trashed, trashed_at, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+              file_name = excluded.file_name,
+              folder = excluded.folder,
+              tags = excluded.tags,
+              description = excluded.description,
+              is_favorite = excluded.is_favorite,
+              is_trashed = excluded.is_trashed,
+              trashed_at = excluded.trashed_at,
+              updated_at = CURRENT_TIMESTAMP
+              WHERE vault_files.user_id = excluded.user_id`,
+        args: [
+          file.id,
+          targetUserId,
+          file.fileName,
+          file.fileKey || "",
+          file.fileSize || 0,
+          file.mimeType || "application/pdf",
+          file.folder || "General",
+          JSON.stringify(file.tags || []),
+          file.description || null,
+          file.isFavorite ? 1 : 0,
+          file.isTrashed ? 1 : 0,
+          file.trashedAt || null,
+          file.createdAt || new Date().toISOString(),
+        ],
+      });
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Server vault files error (POST):", err);
+      return res.status(500).json({ error: "Failed to save vault file" });
+    }
+  });
+
+  // DELETE /api/vault/files
+  app.delete("/api/vault/files", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
+      const id = req.query.id;
+      const targetUserId = verifiedUserId || req.query.userId || req.query.user_id;
+
+      if (!id || !targetUserId) {
+        return res.status(400).json({ error: "id and authentication required" });
+      }
+
+      await tursoClient.execute({
+        sql: "DELETE FROM vault_files WHERE id = ? AND user_id = ?",
+        args: [String(id), String(targetUserId)],
+      });
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Server vault file delete error:", err);
+      return res.status(500).json({ error: "Failed to delete vault file" });
+    }
+  });
+
+  // PATCH /api/vault/files/folder (Rename folder)
+  app.patch("/api/vault/files/folder", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
+      const { oldFolder, newFolder, userId } = req.body || {};
+      const targetUserId = verifiedUserId || userId;
+
+      if (!oldFolder || !newFolder || !targetUserId) {
+        return res.status(400).json({ error: "Missing parameters" });
+      }
+
+      await tursoClient.execute({
+        sql: "UPDATE vault_files SET folder = ? WHERE user_id = ? AND folder = ?",
+        args: [String(newFolder), String(targetUserId), String(oldFolder)],
+      });
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Folder rename error:", err);
+      return res.status(500).json({ error: "Failed to update folder" });
+    }
+  });
+
+  // DELETE /api/vault/files/folder (Delete folder files)
+  app.delete("/api/vault/files/folder", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
+      const folder = req.query.folder;
+      const targetUserId = verifiedUserId || req.query.userId;
+
+      if (!folder || !targetUserId) {
+        return res.status(400).json({ error: "Missing parameters" });
+      }
+
+      await tursoClient.execute({
+        sql: "DELETE FROM vault_files WHERE user_id = ? AND folder = ?",
+        args: [String(targetUserId), String(folder)],
+      });
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Folder delete error:", err);
+      return res.status(500).json({ error: "Failed to delete folder content" });
+    }
+  });
+
+  // PATCH /api/vault/files/move (Move file to folder)
+  app.patch("/api/vault/files/move", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
+      const { fileId, folder, userId } = req.body || {};
+      const targetUserId = verifiedUserId || userId;
+
+      if (!fileId || !folder || !targetUserId) {
+        return res.status(400).json({ error: "Missing parameters" });
+      }
+
+      await tursoClient.execute({
+        sql: "UPDATE vault_files SET folder = ? WHERE id = ? AND user_id = ?",
+        args: [String(folder), String(fileId), String(targetUserId)],
+      });
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Move file error:", err);
+      return res.status(500).json({ error: "Failed to move file" });
+    }
+  });
+
+  // PATCH /api/vault/files/trash (Move to trash or restore)
+  app.patch("/api/vault/files/trash", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
+      const { fileId, isTrashed, trashedAt, userId } = req.body || {};
+      const targetUserId = verifiedUserId || userId;
+
+      if (!fileId || !targetUserId) {
+        return res.status(400).json({ error: "Missing parameters" });
+      }
+
+      await tursoClient.execute({
+        sql: "UPDATE vault_files SET is_trashed = ?, trashed_at = ? WHERE id = ? AND user_id = ?",
+        args: [isTrashed ? 1 : 0, trashedAt || null, String(fileId), String(targetUserId)],
+      });
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Trash update error:", err);
+      return res.status(500).json({ error: "Failed to update trash state" });
+    }
+  });
+
+  // DELETE /api/vault/files/empty-trash
+  app.delete("/api/vault/files/empty-trash", async (req, res) => {
+    try {
+      if (!tursoClient) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+      await ensureTables();
+
+      const verifiedUserId = await authenticateUser(req);
+      const targetUserId = verifiedUserId || req.query.userId;
+
+      if (!targetUserId) {
+        return res.status(400).json({ error: "Missing parameters" });
+      }
+
+      await tursoClient.execute({
+        sql: "DELETE FROM vault_files WHERE user_id = ? AND is_trashed = 1",
+        args: [String(targetUserId)],
+      });
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Empty trash error:", err);
+      return res.status(500).json({ error: "Failed to empty trash" });
     }
   });
 

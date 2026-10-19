@@ -1,7 +1,7 @@
 {
-  "name": "react-example",
+  "name": "nocus",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -24,12 +24,12 @@
     "@capacitor/android": "^8.5.3",
     "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.3",
+    "@clerk/backend": "^3.25.0",
     "@clerk/react": "^6.17.8",
     "@clerk/themes": "^2.4.57",
     "@google/genai": "^2.4.0",
     "@libsql/client": "^0.18.0",
     "@tailwindcss/vite": "^4.1.14",
-    "@types/pdf-parse": "^1.1.5",
     "@vitejs/plugin-react": "^5.0.4",
     "canvas-confetti": "^1.9.4",
     "dotenv": "^17.2.3",
